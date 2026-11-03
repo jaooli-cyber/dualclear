@@ -1,3 +1,4 @@
+use core::num::IntDowncast
 use core::ptr::MemVec
 use dualclear_core::{Bid, GOLDEN_FINGERPRINT, MAX_BIDS, Price, clear}
 use std::abi::{DynArray, dyn_array_from, sol}
@@ -80,4 +81,40 @@ fn evm_adapter_matches_the_shared_golden() uses (evm: mut Evm) {
     core::assert(result.3.get(1).id == 1 && result.3.get(1).quantity == 3)
     core::assert(result.3.get(2).id == 2 && result.3.get(2).quantity == 2)
     core::assert(result.3.get(3).id == 3 && result.3.get(3).quantity == 0)
+}
+
+#[test(should_revert)]
+fn evm_handler_precheck_rejects_empty_bids() uses (evm: mut Evm) {
+    let gate = evm.create2<DualClearGate>(value: Wei::zero(), args: (), salt: 2)
+    let memory_bids = MemVec<BidInput>::new()
+    let bids = DynArray::from_slice(memory_bids.as_slice())
+
+    let _result: (u256, u64, u64, DynArray<FillOutput>) = evm
+        .call(
+            addr: gate,
+            gas: 2000000,
+            value: Wei::zero(),
+            message: DualClearMsg::Clear { supply: 1, bids },
+        )
+}
+
+#[test(should_revert)]
+fn evm_handler_precheck_rejects_seventeen_bids() uses (evm: mut Evm) {
+    let gate = evm.create2<DualClearGate>(value: Wei::zero(), args: (), salt: 3)
+    var memory_bids = MemVec<BidInput>::with_capacity(MAX_BIDS + 1)
+    var index: usize = 0
+    while index < MAX_BIDS + 1 {
+        let id: u64 = ((index + 1) as u256).downcast_unchecked()
+        memory_bids.push(BidInput { id, price_raw: 1000000, quantity: 1 })
+        index += 1
+    }
+    let bids = DynArray::from_slice(memory_bids.as_slice())
+
+    let _result: (u256, u64, u64, DynArray<FillOutput>) = evm
+        .call(
+            addr: gate,
+            gas: 2000000,
+            value: Wei::zero(),
+            message: DualClearMsg::Clear { supply: 17, bids },
+        )
 }
