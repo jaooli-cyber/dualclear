@@ -10,7 +10,17 @@ and reproducible evidence. It is not a DEX or settlement system.
 
 ## Fast path: the judge demo
 
-On Linux x86-64 with a C toolchain:
+Prerequisites:
+
+- Linux x86-64;
+- `curl`, `sha256sum`, `cmp`, and `make`;
+- a C toolchain for native builds; and
+- outbound HTTPS for the initial compiler download.
+
+For a cold checkout, run `make setup` first. Timing labels below assume the
+pinned compiler is already cached and exclude network download time.
+
+Then run:
 
 ```sh
 make demo
@@ -33,7 +43,7 @@ DualClear cross-backend golden demo: PASS
 
 No chain, wallet, deployment, frontend, or external test framework is required.
 
-## Deeper path: 2–5 minute verification
+## Deeper path after setup: 2–5 minute verification
 
 Run these independently:
 
@@ -59,7 +69,7 @@ cases, four native adapter cases, and 26 CLI cases.
 
 | Claim | Primary evidence | Reproduce |
 | --- | --- | --- |
-| One Fe kernel produces the same canonical outcome on two targets | [Shared core](gate/core/src/lib.fe), [relations](docs/METAMORPHIC.md) | `make demo` |
+| One Fe kernel produces the same canonical outcome on two targets | [Shared core](gate/core/src/lib.fe), [relations](docs/METAMORPHIC.md) | `make verify` |
 | EVM v1 has a frozen ABI and exact wire golden | [ABI fixtures](abi/), [EVM interface](docs/EVM.md) | `make abi-check` |
 | Native invalid input has a typed `Result` surface | [Native adapter](gate/native/src/lib.fe), [CLI](docs/CLI.md) | `make verify` |
 | The native CLI materializes canonical DCG1 as hex | [Golden hex](demo/golden.dcg1.hex) | `make test-cli` |
