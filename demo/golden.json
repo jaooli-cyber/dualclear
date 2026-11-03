@@ -1,0 +1,25 @@
+{
+  "schema": "dualclear-golden-v1",
+  "purpose": "Cross-backend interoperability vector; not a cryptographic commitment",
+  "supply": 7,
+  "input_bids": [
+    { "id": 2, "price_raw": "2000000", "quantity": 5 },
+    { "id": 3, "price_raw": "1000000", "quantity": 7 },
+    { "id": 9, "price_raw": "3000000", "quantity": 2 },
+    { "id": 1, "price_raw": "2000000", "quantity": 5 }
+  ],
+  "expected": {
+    "clearing_price_raw": "2000000",
+    "filled": 7,
+    "fills": [
+      { "id": 9, "quantity": 2 },
+      { "id": 1, "quantity": 3 },
+      { "id": 2, "quantity": 2 },
+      { "id": 3, "quantity": 0 }
+    ],
+    "canonical_bytes_length": 284,
+    "fingerprint_algorithm": "FNV-1a64",
+    "fingerprint": "0xf85927c169cff4f1"
+  },
+  "id_policy": "Unique IDs are assigned by the trusted venue under a deterministic policy."
+}

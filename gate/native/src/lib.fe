@@ -1,8 +1,8 @@
 use core::ptr::MemVec
-use dualclear_core::{Bid, GOLDEN_FINGERPRINT, Outcome, Price, clear}
+use dualclear_core::{Bid, GOLDEN_FINGERPRINT, InputError, Outcome, Price, clear_checked}
 
-pub fn clear_native(_ bids: own MemVec<Bid>, _ supply: u64) -> Outcome {
-    clear(bids, supply)
+pub fn clear_native(_ bids: own MemVec<Bid>, _ supply: u64) -> Result<InputError, Outcome> {
+    clear_checked(bids, supply)
 }
 
 fn native_golden_matches() -> bool {
@@ -20,19 +20,23 @@ fn native_golden_matches() -> bool {
         Bid { id: 9, price: Price::from_raw(3000000), quantity: 2 },
     )
 
-    let outcome = clear_native(bids, supply: 7)
-    outcome.clearing_price_raw == 2000000
-        && outcome.filled == 7
-        && outcome.fingerprint == GOLDEN_FINGERPRINT
-        && outcome.fills.len() == 4
-        && outcome.fills[0].id == 9
-        && outcome.fills[0].quantity == 2
-        && outcome.fills[1].id == 1
-        && outcome.fills[1].quantity == 3
-        && outcome.fills[2].id == 2
-        && outcome.fills[2].quantity == 2
-        && outcome.fills[3].id == 3
-        && outcome.fills[3].quantity == 0
+    match clear_native(bids, supply: 7) {
+        Result::Ok(outcome) => {
+            outcome.clearing_price_raw == 2000000
+                && outcome.filled == 7
+                && outcome.fingerprint == GOLDEN_FINGERPRINT
+                && outcome.fills.len() == 4
+                && outcome.fills[0].id == 9
+                && outcome.fills[0].quantity == 2
+                && outcome.fills[1].id == 1
+                && outcome.fills[1].quantity == 3
+                && outcome.fills[2].id == 2
+                && outcome.fills[2].quantity == 2
+                && outcome.fills[3].id == 3
+                && outcome.fills[3].quantity == 0
+        },
+        Result::Err(_) => false,
+    }
 }
 
 pub fn main() -> i32 {
@@ -42,4 +46,15 @@ pub fn main() -> i32 {
 #[test]
 fn native_adapter_matches_the_shared_golden() {
     core::assert(native_golden_matches())
+}
+
+#[test]
+fn native_invalid_input_returns_typed_error() {
+    let bids = MemVec<Bid>::new()
+    match clear_native(bids, supply: 1) {
+        Result::Err(InputError::EmptyBids) => {},
+        _ => {
+            assert!(false)
+        },
+    }
 }
