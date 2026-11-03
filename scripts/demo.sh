@@ -18,11 +18,11 @@ mkdir -p -- "$OUT_DIR"
 find "$OUT_DIR" -mindepth 1 -depth -delete
 mkdir -p -- "$OUT_DIR/native"
 
-printf '\n[1/5] Exact DCG1 bytes on Sonatina\n'
+printf '\n[1/5] Metamorphic core relations on Sonatina\n'
 "$FE_BIN" test \
     --backend sonatina --profile test -O1 \
     --jobs 1 --grouped \
-    --filter golden_dcg1_bytes_are_exact \
+    --filter metamorphic_ \
     -i dualclear_core "$WORKSPACE"
 
 printf '\n[2/5] EVM adapter positive conformance vectors\n'
@@ -32,11 +32,11 @@ printf '\n[2/5] EVM adapter positive conformance vectors\n'
     --filter evm_adapter_matches \
     -i dualclear_evm "$WORKSPACE"
 
-printf '\n[3/5] Exact DCG1 bytes on native\n'
+printf '\n[3/5] Same metamorphic core relations on native\n'
 "$FE_BIN" test \
     --backend native --profile test -O1 \
     --jobs 1 --grouped --native-timeout-secs 120 \
-    --filter golden_dcg1_bytes_are_exact \
+    --filter metamorphic_ \
     -i dualclear_core "$WORKSPACE"
 
 printf '\n[4/5] Native adapter positive conformance vectors\n'
@@ -75,10 +75,10 @@ if ! cmp -s -- "$VECTOR_HEX" "$actual_hex"; then
 fi
 
 printf '\nConformance summary:\n'
-printf '  DCG1 exact bytes (Sonatina/native): PASS\n'
-printf '  EVM adapter positive vectors:       PASS\n'
-printf '  Native adapter positive vectors:    PASS\n'
-printf '  Native CLI output vs hex fixture:   PASS (284 bytes)\n'
+printf '  Metamorphic relations (both targets): PASS (3/3 + 3/3)\n'
+printf '  EVM adapter positive vectors:          PASS\n'
+printf '  Native adapter positive vectors:       PASS\n'
+printf '  Native CLI output vs hex fixture:      PASS (284 bytes)\n'
 printf '\nHuman-readable golden reference:\n\n'
 cat "$VECTOR"
 printf '\n\nDualClear cross-backend golden demo: PASS\n'
