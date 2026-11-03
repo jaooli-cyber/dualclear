@@ -46,7 +46,7 @@ printf '\n[4/5] Native adapter positive conformance vectors\n'
     --filter native_adapter_matches \
     -i dualclear_native "$WORKSPACE"
 
-printf '\n[5/5] Standalone native DCG1 emission\n'
+printf '\n[5/5] Native CLI input to materialized DCG1\n'
 "$FE_BIN" build \
     --backend native --profile release -O1 \
     --emit executable \
@@ -62,7 +62,12 @@ if [[ "${#native_executables[@]}" -ne 1 ]]; then
     exit 1
 fi
 actual_hex="$OUT_DIR/native/golden.actual.hex"
-"${native_executables[0]}" >"$actual_hex"
+"${native_executables[0]}" \
+    7 \
+    3 1000000 7 \
+    1 2000000 5 \
+    2 2000000 5 \
+    9 3000000 2 >"$actual_hex"
 if ! cmp -s -- "$VECTOR_HEX" "$actual_hex"; then
     printf 'Native DCG1 output mismatch.\n' >&2
     diff -u -- "$VECTOR_HEX" "$actual_hex" >&2 || true
@@ -73,7 +78,7 @@ printf '\nConformance summary:\n'
 printf '  DCG1 exact bytes (Sonatina/native): PASS\n'
 printf '  EVM adapter positive vectors:       PASS\n'
 printf '  Native adapter positive vectors:    PASS\n'
-printf '  Native executable vs hex fixture:   PASS (284 bytes)\n'
+printf '  Native CLI output vs hex fixture:   PASS (284 bytes)\n'
 printf '\nHuman-readable golden reference:\n\n'
 cat "$VECTOR"
 printf '\n\nDualClear cross-backend golden demo: PASS\n'

@@ -82,14 +82,17 @@ The EVM adapter exposes
 filled quantity, checksum, and ranked fills. Its `DynArray` cardinality check
 occurs after ABI decoding; it is a product bound, not a predecode calldata
 firewall.
+The shared kernel constructs the complete DCG1 bytes on this path, but the
+current EVM ABI returns the full scalar/fill result and checksum rather than
+copying those bytes into returndata.
 
 ### Native
 
 The native ingot exposes
 `clear_native(MemVec<Bid>, u64) -> Result<InputError, Outcome>`. Its standalone
-executable clears the golden input and emits the complete DCG1 representation
-as lowercase hexadecimal. The demo compares that materialized output against
-an independent fixture. The shared `validate_input` and `clear_checked`
-functions report six explicit error variants, so native callers can handle
-invalid input without a process-level trap. The assertion-based `clear`
-function remains the thin EVM adapter's enforcing entrypoint.
+CLI accepts 1 to 16 decimal bid tuples, passes them through `clear_checked`,
+and emits the complete DCG1 representation as lowercase hexadecimal. With no
+arguments it retains the golden demo mode. The shared validation functions
+report six explicit error variants, so native callers receive a non-trapping
+error surface. The assertion-based `clear` function remains the thin EVM
+adapter's enforcing entrypoint.

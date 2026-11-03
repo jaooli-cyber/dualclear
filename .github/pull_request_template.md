@@ -4,6 +4,8 @@ Describe the change and why it belongs in DualClear.
 
 ## Verification
 
+- [ ] `make metrics`
+- [ ] EVM metric snapshot updated if EVM artifacts intentionally changed
 - [ ] `make verify`
 - [ ] `make demo`
 - [ ] EVM and native adapters still call the shared core

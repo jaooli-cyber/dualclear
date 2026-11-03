@@ -49,6 +49,21 @@ the adapter matrix:
 - EVM adapter tests: 10/10;
 - native adapter tests: 4/4.
 
+The bounded native CLI then added strict decimal parsing, stable silent error
+codes, explicit-input DCG1 emission, maximum-value and 16-bid fixtures, and a
+26-case parser/boundary matrix. It continues to call `clear_checked`; it does
+not duplicate the clearing algorithm.
+
+Red Team also reproduced a late buffered-output failure with `/dev/full`.
+Fe 26.5 does not expose the final flush as a fallible operation, so a proposed
+exit-code guarantee was removed before commit. The accepted host-I/O limitation
+is documented explicitly instead.
+
+The metrics review then closed two provenance gaps: direct script execution now
+verifies the official compiler binary hash, and CI compares EVM measurements
+against a source-bound versioned snapshot. Artifact-size claims remain separate
+from gas claims.
+
 The post-gate technical verdict is `GO`. This is the verdict relevant to
 the project's feasibility. The historical scheduling verdict remains visible
 here and in the underlying Git history.
@@ -59,7 +74,8 @@ No blocking S0 or S1 finding remains. The post-baseline hardening added
 `InputError`, `validate_input`, `clear_checked`, and a native
 `Result<InputError, Outcome>` API. Accepted limitations include trusted venue
 ID assignment, post-decode EVM cardinality, the assertion-based enforcing EVM
-entrypoint, and a non-cryptographic FNV interoperability checksum.
+entrypoint, buffered native-output finalization, and a non-cryptographic FNV
+interoperability checksum.
 
 The detailed gate records remain recoverable in the post-H0 Git history. They
 are not part of the current public-facing tree because they contain superseded
