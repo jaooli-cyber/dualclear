@@ -13,6 +13,8 @@ price and fills on both backends.
 DualClear is registered as project **FE-013** in the
 [Fe Builders Challenge 2026](https://fe-lang.org/contest/).
 
+Judges: start with the [2–5 minute handoff](JUDGING.md).
+
 ## Why this matters
 
 Auction systems often reimplement clearing logic in an off-chain service and a
