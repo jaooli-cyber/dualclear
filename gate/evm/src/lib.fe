@@ -1,6 +1,14 @@
 use core::num::IntDowncast
 use core::ptr::MemVec
-use dualclear_core::{Bid, GOLDEN_FINGERPRINT, MAX_BIDS, Price, clear}
+use dualclear_core::{
+    Bid,
+    GOLDEN_FINGERPRINT,
+    MAX_BIDS,
+    MAX_VALUES_FINGERPRINT,
+    Price,
+    TIE_BREAK_FINGERPRINT,
+    clear,
+}
 use std::abi::{DynArray, dyn_array_from, sol}
 use std::evm::{Evm, Wei}
 
@@ -116,5 +124,110 @@ fn evm_handler_precheck_rejects_seventeen_bids() uses (evm: mut Evm) {
             gas: 2000000,
             value: Wei::zero(),
             message: DualClearMsg::Clear { supply: 17, bids },
+        )
+}
+#[test]
+fn evm_adapter_matches_tie_break_vector() uses (evm: mut Evm) {
+    let gate = evm.create2<DualClearGate>(value: Wei::zero(), args: (), salt: 4)
+    let bids = dyn_array_from(
+        [
+            BidInput { id: 8, price_raw: 2000000, quantity: 1 },
+            BidInput { id: 4, price_raw: 2000000, quantity: 1 },
+        ],
+    )
+    let result: (u256, u64, u64, DynArray<FillOutput>) = evm
+        .call(
+            addr: gate,
+            gas: 2000000,
+            value: Wei::zero(),
+            message: DualClearMsg::Clear { supply: 1, bids },
+        )
+
+    core::assert(result.0 == 2000000)
+    core::assert(result.1 == 1)
+    core::assert(result.2 == TIE_BREAK_FINGERPRINT)
+    core::assert(result.3.len() == 2)
+    core::assert(result.3.get(0).id == 4 && result.3.get(0).quantity == 1)
+    core::assert(result.3.get(1).id == 8 && result.3.get(1).quantity == 0)
+}
+
+#[test]
+fn evm_adapter_matches_max_values_vector() uses (evm: mut Evm) {
+    let gate = evm.create2<DualClearGate>(value: Wei::zero(), args: (), salt: 5)
+    let max_quantity: u64 = 0xffffffffffffffff
+    let max_price: u256 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    let bids = dyn_array_from(
+        [BidInput { id: 1, price_raw: max_price, quantity: max_quantity }],
+    )
+    let result: (u256, u64, u64, DynArray<FillOutput>) = evm
+        .call(
+            addr: gate,
+            gas: 2000000,
+            value: Wei::zero(),
+            message: DualClearMsg::Clear { supply: max_quantity, bids },
+        )
+
+    core::assert(result.0 == max_price)
+    core::assert(result.1 == max_quantity)
+    core::assert(result.2 == MAX_VALUES_FINGERPRINT)
+    core::assert(result.3.len() == 1)
+    core::assert(result.3.get(0).id == 1)
+    core::assert(result.3.get(0).quantity == max_quantity)
+}
+
+#[test(should_revert)]
+fn evm_rejects_zero_supply() uses (evm: mut Evm) {
+    let gate = evm.create2<DualClearGate>(value: Wei::zero(), args: (), salt: 6)
+    let bids = dyn_array_from([BidInput { id: 1, price_raw: 1000000, quantity: 1 }])
+    let _result: (u256, u64, u64, DynArray<FillOutput>) = evm
+        .call(
+            addr: gate,
+            gas: 2000000,
+            value: Wei::zero(),
+            message: DualClearMsg::Clear { supply: 0, bids },
+        )
+}
+
+#[test(should_revert)]
+fn evm_rejects_zero_quantity() uses (evm: mut Evm) {
+    let gate = evm.create2<DualClearGate>(value: Wei::zero(), args: (), salt: 7)
+    let bids = dyn_array_from([BidInput { id: 1, price_raw: 1000000, quantity: 0 }])
+    let _result: (u256, u64, u64, DynArray<FillOutput>) = evm
+        .call(
+            addr: gate,
+            gas: 2000000,
+            value: Wei::zero(),
+            message: DualClearMsg::Clear { supply: 1, bids },
+        )
+}
+
+#[test(should_revert)]
+fn evm_rejects_duplicate_id() uses (evm: mut Evm) {
+    let gate = evm.create2<DualClearGate>(value: Wei::zero(), args: (), salt: 8)
+    let bids = dyn_array_from(
+        [
+            BidInput { id: 7, price_raw: 2000000, quantity: 1 },
+            BidInput { id: 7, price_raw: 1000000, quantity: 1 },
+        ],
+    )
+    let _result: (u256, u64, u64, DynArray<FillOutput>) = evm
+        .call(
+            addr: gate,
+            gas: 2000000,
+            value: Wei::zero(),
+            message: DualClearMsg::Clear { supply: 1, bids },
+        )
+}
+
+#[test(should_revert)]
+fn evm_rejects_demand_below_supply() uses (evm: mut Evm) {
+    let gate = evm.create2<DualClearGate>(value: Wei::zero(), args: (), salt: 9)
+    let bids = dyn_array_from([BidInput { id: 1, price_raw: 1000000, quantity: 1 }])
+    let _result: (u256, u64, u64, DynArray<FillOutput>) = evm
+        .call(
+            addr: gate,
+            gas: 2000000,
+            value: Wei::zero(),
+            message: DualClearMsg::Clear { supply: 2, bids },
         )
 }

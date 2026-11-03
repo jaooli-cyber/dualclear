@@ -30,8 +30,9 @@ The test corpus covers:
 - maximum `u64` quantity and `u256` price;
 - conservation and no overfill;
 - every `InputError` variant through the typed checked API;
-- the same 16-case core corpus on Sonatina and native;
-- three EVM adapter cases and two native adapter cases.
+- the same 17-case core corpus on Sonatina and native;
+- nine EVM adapter cases, including all six invalid-input classes;
+- four native adapter cases, including typed rejection and extreme values.
 
 Native integrations should use `clear_native` or `clear_checked`, both of
 which return a typed `Result` for invalid input.
