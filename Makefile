@@ -3,7 +3,9 @@ SHELL := /bin/bash
 FE_BIN ?= $(CURDIR)/.contest-tools/fe_linux_amd64
 export FE_BIN
 
-.PHONY: help setup verify demo test-cli metrics abi-check
+.NOTPARALLEL: candidate release-evidence
+
+.PHONY: help setup verify demo test-cli metrics abi-check candidate release-evidence
 
 help:
 	@printf '%s\n' \
@@ -13,7 +15,9 @@ help:
 	  '  make demo      Run the cross-backend golden demonstration' \
 	  '  make test-cli  Run native CLI boundary and parser tests' \
 	  '  make metrics   Rebuild and measure EVM artifacts' \
-	  '  make abi-check Verify the frozen ABI and raw v1 golden'
+	  '  make abi-check Verify the frozen ABI and raw v1 golden' \
+	  '  make candidate Run every submission-candidate verification gate' \
+	  '  make release-evidence EVIDENCE_TAG=fe-013-submission-v1'
 
 setup:
 	./scripts/install-fe.sh
@@ -32,3 +36,11 @@ metrics: setup
 
 abi-check: metrics
 	./scripts/check-abi.sh
+
+candidate: verify abi-check demo
+
+release-evidence:
+	@test -n "$(EVIDENCE_TAG)" || { \
+		echo "usage: make release-evidence EVIDENCE_TAG=fe-013-submission-v1" >&2; exit 1; }
+	EVIDENCE_PRE_TAG="$(EVIDENCE_PRE_TAG)" \
+		./scripts/release-evidence.sh "$(EVIDENCE_TAG)"

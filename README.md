@@ -82,6 +82,14 @@ Run the complete cross-backend verification:
 make verify
 ```
 
+Run every submission-candidate gate in one command:
+
+```sh
+make candidate
+```
+
+This executes `make verify`, `make abi-check`, and `make demo` serially.
+
 ### 60-second judge demo (after setup)
 
 ```sh
@@ -162,6 +170,8 @@ docs/         architecture, EVM, CLI, metrics, metamorphic relations, security,
               limitations, provenance, and AI disclosure
 ```
 
+The exact public form copy is retained in [SUBMISSION.md](SUBMISSION.md).
+
 ## Current verified status
 
 The current repository was built with Fe 26.5.0:
@@ -181,6 +191,11 @@ The current repository was built with Fe 26.5.0:
 - EVM runtime bytecode: 7,931 bytes with 16,645 bytes EIP-170 headroom;
 - frozen ABI v1 and exact 484-byte calldata / 416-byte returndata golden:
   pass.
+
+The complete submission candidate is identified by annotated tag
+`fe-013-submission-v1`. The full 40-character commit SHA entered in the
+official form is authoritative; the tag and release evidence provide stable
+navigation and reproducibility records for that exact commit.
 
 The project is a working prototype, not a production exchange or audited
 settlement system.

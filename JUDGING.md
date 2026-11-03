@@ -52,6 +52,12 @@ make abi-check
 make verify
 ```
 
+Or execute the complete submission gate in order:
+
+```sh
+make candidate
+```
+
 Expected success markers:
 
 ```text
@@ -118,5 +124,6 @@ The exact counterexamples and mitigations are in
 - license: [Apache-2.0](LICENSE).
 
 The exact full commit SHA selected for judging is supplied separately in the
-contest submission. Review and reproduce that immutable checkout rather than a
-moving branch tip.
+contest submission. Annotated tag `fe-013-submission-v1` and its release
+evidence point to that same commit. Review and reproduce the immutable checkout
+rather than a moving branch tip.
