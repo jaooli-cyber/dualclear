@@ -89,4 +89,12 @@
 - EVM build and Sonatina core/adapter tests: pending.
 - Native build, executable run, and native core/wrapper tests: pending.
 - Heavy commands remain prohibited while RG-STOP holds.
-- Gate state: **HOLD**.
+- 2026-11-03T07:15:30Z: the fixed gate window was closed while the same two
+  external `python3` processes and one external `fe` process remained
+  CPU-heavy. Only permitted process metadata was observed; no external work
+  was inspected or modified.
+- No backend build or runtime test was permitted or completed in-window.
+- Gate state: **KILL — empirical gate not completed under RG-STOP**.
+- This is timebox enforcement, not a demonstrated product or algorithm failure.
+- PLAN B is unavailable because no complete empirical EVM path exists.
+- DualClear is frozen and abandoned after this decision.
