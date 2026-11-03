@@ -59,6 +59,11 @@ Fe 26.5 does not expose the final flush as a fallible operation, so a proposed
 exit-code guarantee was removed before commit. The accepted host-I/O limitation
 is documented explicitly instead.
 
+The metrics review then closed two provenance gaps: direct script execution now
+verifies the official compiler binary hash, and CI compares EVM measurements
+against a source-bound versioned snapshot. Artifact-size claims remain separate
+from gas claims.
+
 The post-gate technical verdict is `GO`. This is the verdict relevant to
 the project's feasibility. The historical scheduling verdict remains visible
 here and in the underlying Git history.

@@ -116,6 +116,18 @@ The executable accepts
 It emits canonical DCG1 on success and remains silent with a stable nonzero
 exit code on malformed or invalid input. See [Native CLI](docs/CLI.md).
 
+### Reproducible EVM metrics
+
+```sh
+make metrics
+```
+
+With the pinned release/O1 build, creation bytecode is 7,951 bytes and runtime
+bytecode is 7,931 bytes, leaving 16,645 bytes below the EIP-170 runtime limit.
+The command prints artifact hashes and fails on snapshot drift or if the runtime
+limit is exceeded. These are size measurements, not gas claims. See
+[EVM metrics](docs/METRICS.md).
+
 ## Repository layout
 
 ```text
@@ -123,9 +135,9 @@ gate/
   core/       target-neutral clearing and cross-backend tests
   evm/        typed EVM ABI adapter and adapter tests
   native/     native Result API and bounded CLI
-demo/         portable DCG1 conformance vectors
-scripts/      pinned toolchain, verification, CLI, and demo entrypoints
-docs/         architecture, CLI, security, limitations, provenance,
+demo/         portable DCG1 vectors and the EVM metrics snapshot
+scripts/      pinned toolchain, verification, CLI, demo, and metrics
+docs/         architecture, CLI, metrics, security, limitations, provenance,
               and AI disclosure
 ```
 
@@ -141,7 +153,8 @@ The current repository was built with Fe 26.5.0:
 - native wrapper under native: 4/4;
 - invalid inputs return typed `InputError` values through `clear_checked`
   and the native `clear_native` API;
-- native CLI parser and boundary matrix: 26/26.
+- native CLI parser and boundary matrix: 26/26;
+- EVM runtime bytecode: 7,931 bytes with 16,645 bytes EIP-170 headroom.
 
 The project is a working prototype, not a production exchange or audited
 settlement system.
@@ -156,8 +169,8 @@ The DCG1 FNV-1a64 value is only an interoperability checksum. It is **not**
 collision-resistant and must never be used as a cryptographic commitment,
 signature, or proof.
 
-Read [Native CLI](docs/CLI.md), [Security](docs/SECURITY.md), and
-[Limitations](docs/LIMITATIONS.md) before integrating the kernel.
+Read [Native CLI](docs/CLI.md), [EVM metrics](docs/METRICS.md),
+[Security](docs/SECURITY.md), and [Limitations](docs/LIMITATIONS.md).
 
 ## Contest disclosure
 
