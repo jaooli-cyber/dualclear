@@ -61,6 +61,17 @@ pub struct Outcome {
     pub fills: MemVec<Fill>,
 }
 
+pub enum InputError {
+    EmptyBids,
+    TooManyBids,
+    ZeroSupply,
+    ZeroQuantity,
+    DuplicateId,
+    DemandBelowSupply,
+}
+
+impl Copy for InputError {}
+
 struct RemainderSeat { index: usize, id: u64, remainder: u256 }
 
 impl Copy for RemainderSeat {}
@@ -165,10 +176,16 @@ pub fn fnv1a64(_ bytes: MemSlice<u8>) -> u64 {
     hash
 }
 
-pub fn valid_input(_ bids: MemSlice<Bid>, _ supply: u64) -> bool {
+pub fn validate_input(_ bids: MemSlice<Bid>, _ supply: u64) -> Result<InputError, ()> {
     let count = bids.len()
-    if count == 0 || count > MAX_BIDS || supply == 0 {
-        return false
+    if count == 0 {
+        return Result::Err(InputError::EmptyBids)
+    }
+    if count > MAX_BIDS {
+        return Result::Err(InputError::TooManyBids)
+    }
+    if supply == 0 {
+        return Result::Err(InputError::ZeroSupply)
     }
 
     var total_demand: u256 = 0
@@ -176,25 +193,46 @@ pub fn valid_input(_ bids: MemSlice<Bid>, _ supply: u64) -> bool {
     while index < count {
         let bid = bids[index]
         if bid.quantity == 0 {
-            return false
+            return Result::Err(InputError::ZeroQuantity)
         }
         var previous: usize = 0
         while previous < index {
             if bids[previous].id == bid.id {
-                return false
+                return Result::Err(InputError::DuplicateId)
             }
             previous += 1
         }
         total_demand += bid.quantity as u256
         index += 1
     }
-    total_demand >= supply as u256
+    if total_demand < supply as u256 {
+        return Result::Err(InputError::DemandBelowSupply)
+    }
+    Result::Ok(())
+}
+
+pub fn valid_input(_ bids: MemSlice<Bid>, _ supply: u64) -> bool {
+    match validate_input(bids, supply) {
+        Result::Ok(_) => true,
+        Result::Err(_) => false,
+    }
+}
+
+pub fn clear_checked(_ input: own MemVec<Bid>, _ supply: u64) -> Result<InputError, Outcome> {
+    match validate_input(input.as_slice(), supply) {
+        Result::Ok(_) => Result::Ok(clear_validated(input, supply)),
+        Result::Err(error) => Result::Err(error),
+    }
 }
 
 pub fn clear(_ input: own MemVec<Bid>, _ supply: u64) -> Outcome {
+    assert!(valid_input(input.as_slice(), supply))
+    clear_validated(input, supply)
+}
+
+fn clear_validated(_ input: own MemVec<Bid>, _ supply: u64) -> Outcome {
     var bids = input
     let count = bids.len()
-    assert!(valid_input(bids.as_slice(), supply))
     var index: usize = 0
     let supply_word = supply as u256
     sort(mut bids)
@@ -503,6 +541,78 @@ fn demand_below_supply_is_invalid() {
         Bid { id: 1, price: Price::from_raw(1000000), quantity: 1 },
     )
     core::assert(!valid_input(bids.as_slice(), supply: 2))
+}
+
+#[test]
+fn validation_reports_each_error_variant() {
+    let empty = MemVec<Bid>::new()
+    match validate_input(empty.as_slice(), supply: 1) {
+        Result::Err(InputError::EmptyBids) => {},
+        _ => {
+            assert!(false)
+        },
+    }
+
+    var too_many = MemVec<Bid>::with_capacity(MAX_BIDS + 1)
+    var index: usize = 0
+    while index < MAX_BIDS + 1 {
+        let id: u64 = ((index + 1) as u256).downcast_unchecked()
+        too_many.push(Bid { id, price: Price::from_raw(1000000), quantity: 1 })
+        index += 1
+    }
+    match validate_input(too_many.as_slice(), supply: 17) {
+        Result::Err(InputError::TooManyBids) => {},
+        _ => {
+            assert!(false)
+        },
+    }
+
+    var zero_supply = MemVec<Bid>::with_capacity(1)
+    zero_supply.push(
+            Bid { id: 1, price: Price::from_raw(1000000), quantity: 1 },
+        )
+    match validate_input(zero_supply.as_slice(), supply: 0) {
+        Result::Err(InputError::ZeroSupply) => {},
+        _ => {
+            assert!(false)
+        },
+    }
+
+    var zero_quantity = MemVec<Bid>::with_capacity(1)
+    zero_quantity.push(
+            Bid { id: 1, price: Price::from_raw(1000000), quantity: 0 },
+        )
+    match validate_input(zero_quantity.as_slice(), supply: 1) {
+        Result::Err(InputError::ZeroQuantity) => {},
+        _ => {
+            assert!(false)
+        },
+    }
+
+    var duplicate = MemVec<Bid>::with_capacity(2)
+    duplicate.push(
+            Bid { id: 7, price: Price::from_raw(2000000), quantity: 1 },
+        )
+    duplicate.push(
+            Bid { id: 7, price: Price::from_raw(1000000), quantity: 1 },
+        )
+    match validate_input(duplicate.as_slice(), supply: 1) {
+        Result::Err(InputError::DuplicateId) => {},
+        _ => {
+            assert!(false)
+        },
+    }
+
+    var insufficient = MemVec<Bid>::with_capacity(1)
+    insufficient.push(
+            Bid { id: 1, price: Price::from_raw(1000000), quantity: 1 },
+        )
+    match validate_input(insufficient.as_slice(), supply: 2) {
+        Result::Err(InputError::DemandBelowSupply) => {},
+        _ => {
+            assert!(false)
+        },
+    }
 }
 
 #[test]
