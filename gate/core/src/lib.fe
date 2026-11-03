@@ -165,28 +165,38 @@ pub fn fnv1a64(_ bytes: MemSlice<u8>) -> u64 {
     hash
 }
 
-pub fn clear(_ input: own MemVec<Bid>, _ supply: u64) -> Outcome {
-    var bids = input
+pub fn valid_input(_ bids: MemSlice<Bid>, _ supply: u64) -> bool {
     let count = bids.len()
-    assert!(count > 0 && count <= MAX_BIDS)
-    assert!(supply > 0)
+    if count == 0 || count > MAX_BIDS || supply == 0 {
+        return false
+    }
 
     var total_demand: u256 = 0
     var index: usize = 0
     while index < count {
         let bid = bids[index]
-        assert!(bid.quantity > 0)
+        if bid.quantity == 0 {
+            return false
+        }
         var previous: usize = 0
         while previous < index {
-            assert!(bids[previous].id != bid.id)
+            if bids[previous].id == bid.id {
+                return false
+            }
             previous += 1
         }
         total_demand += bid.quantity as u256
         index += 1
     }
+    total_demand >= supply as u256
+}
 
+pub fn clear(_ input: own MemVec<Bid>, _ supply: u64) -> Outcome {
+    var bids = input
+    let count = bids.len()
+    assert!(valid_input(bids.as_slice(), supply))
+    var index: usize = 0
     let supply_word = supply as u256
-    assert!(total_demand >= supply_word)
     sort(mut bids)
 
     var cumulative: u256 = 0
@@ -438,14 +448,14 @@ fn maximum_bid_count_with_exact_demand_conserves_supply() {
     core::assert(total == 16)
 }
 
-#[test(should_revert)]
-fn empty_input_reverts() {
+#[test]
+fn empty_input_is_invalid() {
     let bids = MemVec<Bid>::new()
-    let _outcome = clear(bids, supply: 1)
+    core::assert(!valid_input(bids.as_slice(), supply: 1))
 }
 
-#[test(should_revert)]
-fn seventeen_bids_revert() {
+#[test]
+fn seventeen_bids_are_invalid() {
     var bids = MemVec<Bid>::with_capacity(MAX_BIDS + 1)
     var index: usize = 0
     while index < MAX_BIDS + 1 {
@@ -453,29 +463,29 @@ fn seventeen_bids_revert() {
         bids.push(Bid { id, price: Price::from_raw(1000000), quantity: 1 })
         index += 1
     }
-    let _outcome = clear(bids, supply: 17)
+    core::assert(!valid_input(bids.as_slice(), supply: 17))
 }
 
-#[test(should_revert)]
-fn zero_supply_reverts() {
+#[test]
+fn zero_supply_is_invalid() {
     var bids = MemVec<Bid>::with_capacity(1)
     bids.push(
         Bid { id: 1, price: Price::from_raw(1000000), quantity: 1 },
     )
-    let _outcome = clear(bids, supply: 0)
+    core::assert(!valid_input(bids.as_slice(), supply: 0))
 }
 
-#[test(should_revert)]
-fn zero_quantity_reverts() {
+#[test]
+fn zero_quantity_is_invalid() {
     var bids = MemVec<Bid>::with_capacity(1)
     bids.push(
         Bid { id: 1, price: Price::from_raw(1000000), quantity: 0 },
     )
-    let _outcome = clear(bids, supply: 1)
+    core::assert(!valid_input(bids.as_slice(), supply: 1))
 }
 
-#[test(should_revert)]
-fn duplicate_id_reverts() {
+#[test]
+fn duplicate_id_is_invalid() {
     var bids = MemVec<Bid>::with_capacity(2)
     bids.push(
         Bid { id: 7, price: Price::from_raw(2000000), quantity: 1 },
@@ -483,16 +493,16 @@ fn duplicate_id_reverts() {
     bids.push(
         Bid { id: 7, price: Price::from_raw(1000000), quantity: 1 },
     )
-    let _outcome = clear(bids, supply: 1)
+    core::assert(!valid_input(bids.as_slice(), supply: 1))
 }
 
-#[test(should_revert)]
-fn demand_below_supply_reverts() {
+#[test]
+fn demand_below_supply_is_invalid() {
     var bids = MemVec<Bid>::with_capacity(1)
     bids.push(
         Bid { id: 1, price: Price::from_raw(1000000), quantity: 1 },
     )
-    let _outcome = clear(bids, supply: 2)
+    core::assert(!valid_input(bids.as_slice(), supply: 2))
 }
 
 #[test]
