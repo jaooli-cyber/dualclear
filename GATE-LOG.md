@@ -98,3 +98,15 @@
 - This is timebox enforcement, not a demonstrated product or algorithm failure.
 - PLAN B is unavailable because no complete empirical EVM path exists.
 - DualClear is frozen and abandoned after this decision.
+
+## Post-window technical verification
+
+- 2026-11-03T09:04Z: the user explicitly required complete empirical
+  verification of all three isolated candidates and authorized low-priority
+  work on the shared host whenever aggregate capacity is sufficient.
+- The original fixed-window result remains part of the audit trail.
+- DualClear is reopened only for a late technical viability assessment;
+  evidence obtained now is labelled post-window.
+- The two long-running external `python3` processes ended before this run.
+- Runner limits remain one serial Fe command, CPUs 6-7, one worker, nice
+  level 15, and idle I/O priority.

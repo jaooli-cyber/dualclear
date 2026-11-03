@@ -46,3 +46,10 @@ PLAN B requires a complete green core and EVM path with the failure isolated to 
 - DualClear remains isolated in its own directory, Git history, toolchain, sources, tests, logs, and documentation.
 - Nothing from this project may be shared with OutcomeBatch or Calldata Firewall.
 - Final status: frozen and abandoned after the fixed gate; no further development.
+
+## Later user-authorized technical reassessment
+
+At 2026-11-03T09:04Z the user required complete empirical checks of all three
+candidates. This does not rewrite the original fixed-window result. DualClear
+is reopened solely to determine technical viability through serial Sonatina
+and native build, execution, and test evidence, clearly labelled post-window.
