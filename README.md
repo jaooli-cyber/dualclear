@@ -88,7 +88,8 @@ make demo
 
 The command runs five verification stages:
 
-- exact comparison of all 284 golden DCG1 bytes on Sonatina and native;
+- three deterministic metamorphic relations from the same Fe source on
+  Sonatina and native;
 - golden, tie-break, maximum-value, and 16-bid vectors through the EVM
   adapter;
 - golden, tie-break, and maximum-value vectors through the native adapter;
@@ -99,9 +100,10 @@ The golden outcome is price `2.000000`, filled supply `7`, ranked fills
 `[(9,2), (1,3), (2,2), (3,0)]`, and fingerprint
 `0xf85927c169cff4f1`.
 
-`demo/golden.json` is the human-readable mirror. The Fe tests are
-authoritative for clearing semantics, while `demo/golden.dcg1.hex` is consumed
-directly to verify the native executable's emitted bytes.
+`demo/golden.json` is the human-readable mirror. The complete Fe suite still
+checks all 284 golden DCG1 bytes on both core backends, while the demo's native
+executable consumes `demo/golden.dcg1.hex` directly. See
+[Metamorphic conformance](docs/METAMORPHIC.md).
 
 Build and test commands remain available separately through `make help`.
 
@@ -154,8 +156,8 @@ gate/
 abi/          frozen EVM v1 ABI and decoded/raw golden fixtures
 demo/         portable DCG1 vectors and the EVM metrics snapshot
 scripts/      pinned toolchain, verification, CLI, demo, metrics, and ABI checks
-docs/         architecture, EVM, CLI, metrics, security, limitations, provenance,
-              and AI disclosure
+docs/         architecture, EVM, CLI, metrics, metamorphic relations, security,
+              limitations, provenance, and AI disclosure
 ```
 
 ## Current verified status
@@ -163,15 +165,17 @@ docs/         architecture, EVM, CLI, metrics, security, limitations, provenance
 The current repository was built with Fe 26.5.0:
 
 - EVM/Sonatina release build: pass;
-- shared core under Sonatina: 17/17;
+- shared core under Sonatina: 19/19;
 - EVM adapter under Sonatina: 12/12;
 - native release build and executable: pass;
-- the same shared core under native: 17/17;
+- the same shared core under native: 19/19;
 - native wrapper under native: 4/4;
 - invalid inputs return typed `InputError` values through `clear_checked`
   and the native `clear_native` API;
 - native CLI parser and boundary matrix: 26/26;
 - emitted EVM target: Osaka; destination-chain compatibility is not assumed;
+- three metamorphic relations execute from the same source on both core
+  backends;
 - EVM runtime bytecode: 7,931 bytes with 16,645 bytes EIP-170 headroom;
 - frozen ABI v1 and exact 484-byte calldata / 416-byte returndata golden:
   pass.
@@ -185,11 +189,16 @@ The venue or batch builder must assign unique IDs under a documented,
 deterministic policy. Allowing bidders to choose IDs would make the
 equal-remainder tie-break strategically selectable.
 
+Deterministic venue IDs do not prevent order splitting. If fairness is required
+per participant, the venue must authenticate and aggregate or limit equivalent
+orders by economic identity and price.
+
 The DCG1 FNV-1a64 value is only an interoperability checksum. It is **not**
 collision-resistant and must never be used as a cryptographic commitment,
 signature, or proof.
 
-Read [EVM integration](docs/EVM.md), [Native CLI](docs/CLI.md),
+Read [EVM integration](docs/EVM.md),
+[Metamorphic conformance](docs/METAMORPHIC.md), [Native CLI](docs/CLI.md),
 [EVM metrics](docs/METRICS.md), [Security](docs/SECURITY.md), and
 [Limitations](docs/LIMITATIONS.md).
 

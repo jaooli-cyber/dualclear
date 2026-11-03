@@ -73,6 +73,20 @@ every ranked ID/quantity pair. EVM coverage is now 12/12, and `make abi-check`
 rebuilds the ABI and rejects byte-level ABI, calldata, returndata, metrics, or
 source-snapshot drift.
 
+The Metamorphic Conformance Pack then raised the shared-core corpus to 19
+cases on both Sonatina and native. It compares the complete Outcome and every
+DCG1 byte under bid permutation, preserves allocations under a bounded affine
+price transform, and checks that a strictly below-clearing maximum-quantity bid
+is economically inert for existing allocations.
+
+Release creation bytecode, runtime bytecode, and ABI hashes remain unchanged;
+only the source-bound snapshot changes.
+
+Red Team also made two algorithmic boundaries explicit: largest remainder is
+not individually supply-monotone, and deterministic venue IDs alone do not
+provide participant-level split resistance. Exact counterexamples and the
+venue's authentication/aggregation obligation are retained in the public docs.
+
 The post-gate technical verdict is `GO`. This is the verdict relevant to
 the project's feasibility. The historical scheduling verdict remains visible
 here and in the underlying Git history.
@@ -83,8 +97,9 @@ No blocking S0 or S1 finding remains. The post-baseline hardening added
 `InputError`, `validate_input`, `clear_checked`, and a native
 `Result<InputError, Outcome>` API. Accepted limitations include trusted venue
 ID assignment, post-decode EVM cardinality, the assertion-based enforcing EVM
-entrypoint, buffered native-output finalization, and a non-cryptographic FNV
-interoperability checksum.
+entrypoint, buffered native-output finalization, a non-cryptographic FNV
+interoperability checksum, per-bid rather than participant-level fairness, and
+no individual supply monotonicity guarantee.
 
 The detailed gate records remain recoverable in the post-H0 Git history. They
 are not part of the current public-facing tree because they contain superseded
