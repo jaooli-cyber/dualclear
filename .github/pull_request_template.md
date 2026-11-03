@@ -5,6 +5,8 @@ Describe the change and why it belongs in DualClear.
 ## Verification
 
 - [ ] `make metrics`
+- [ ] `make abi-check`
+- [ ] New interface version added for intentional ABI/wire changes; v1 left untouched
 - [ ] EVM metric snapshot updated if EVM artifacts intentionally changed
 - [ ] `make verify`
 - [ ] `make demo`

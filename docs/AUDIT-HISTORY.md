@@ -64,6 +64,15 @@ verifies the official compiler binary hash, and CI compares EVM measurements
 against a source-bound versioned snapshot. Artifact-size claims remain separate
 from gas claims.
 
+The EVM Integration Pack then pinned the compiler-emitted ABI as frozen v1,
+the canonical `0x74ad3a54` selector, and complete raw golden calldata and
+returndata. Its raw test executes that literal wire payload rather than relying
+only on typed test encoding. The typed golden test independently invokes the
+shared core and compares price, filled supply, fingerprint, result length, and
+every ranked ID/quantity pair. EVM coverage is now 12/12, and `make abi-check`
+rebuilds the ABI and rejects byte-level ABI, calldata, returndata, metrics, or
+source-snapshot drift.
+
 The post-gate technical verdict is `GO`. This is the verdict relevant to
 the project's feasibility. The historical scheduling verdict remains visible
 here and in the underlying Git history.

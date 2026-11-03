@@ -5,6 +5,7 @@ ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 readonly ROOT_DIR
 readonly WORKSPACE="$ROOT_DIR/gate"
 readonly FE_BIN="${FE_BIN:-$ROOT_DIR/.contest-tools/fe_linux_amd64}"
+readonly ABI_FIXTURE="$ROOT_DIR/abi/DualClearGate.v1.json"
 readonly OUT_DIR="$ROOT_DIR/out/metrics"
 readonly SNAPSHOT_FILE="$ROOT_DIR/demo/evm-metrics.env"
 readonly EXPECTED_FE_SHA256="3732fbe8a6e9d2ea3925d02d0e3a1478bc1e01d742c2be75d3ea7300c46c45f0"
@@ -55,6 +56,7 @@ find "$OUT_DIR" -mindepth 1 -depth -delete
 
 readonly CREATION_FILE="$OUT_DIR/DualClearGate.bin"
 readonly RUNTIME_FILE="$OUT_DIR/DualClearGate.runtime.bin"
+readonly METADATA_FILE="$OUT_DIR/DualClearGate.metadata.json"
 readonly ABI_FILE="$OUT_DIR/DualClearGate.abi.json"
 
 hex_character_count() {
@@ -87,6 +89,29 @@ if [[ ! -s "$ABI_FILE" ]]; then
     printf 'Missing or empty ABI artifact: %s\n' "$ABI_FILE" >&2
     exit 1
 fi
+if [[ ! -f "$METADATA_FILE" || -L "$METADATA_FILE" || ! -s "$METADATA_FILE" ]]; then
+    printf 'Missing, empty, or symlinked EVM metadata: %s\n' "$METADATA_FILE" >&2
+    exit 1
+fi
+mapfile -t metadata_evm_versions < <(
+    sed -nE 's/^[[:space:]]*"evmVersion"[[:space:]]*:[[:space:]]*"([^"]+)"[,]?[[:space:]]*$/\1/p' "$METADATA_FILE"
+)
+if [[ "${#metadata_evm_versions[@]}" -ne 1 ]]; then
+    printf 'Expected exactly one evmVersion in %s.\n' "$METADATA_FILE" >&2
+    exit 1
+fi
+evm_version="${metadata_evm_versions[0]}"
+
+
+if [[ ! -f "$ABI_FIXTURE" || -L "$ABI_FIXTURE" || ! -s "$ABI_FIXTURE" ]]; then
+    printf 'Missing, empty, or symlinked ABI v1 fixture: %s\n' "$ABI_FIXTURE" >&2
+    exit 1
+fi
+if ! cmp -s -- "$ABI_FIXTURE" "$ABI_FILE"; then
+    printf 'EVM ABI v1 drift: %s\n' "$ABI_FIXTURE" >&2
+    diff -u -- "$ABI_FIXTURE" "$ABI_FILE" >&2 || true
+    exit 1
+fi
 
 creation_bytes=$((creation_characters / 2))
 runtime_bytes=$((runtime_characters / 2))
@@ -105,6 +130,8 @@ emit_metrics() {
     printf 'backend=sonatina\n'
     printf 'profile=release\n'
     printf 'optimizer=O1\n'
+    printf 'abi_fixture_version=v1\n'
+    printf 'evm_version=%s\n' "$evm_version"
     printf 'creation_bytecode_bytes=%s\n' "$creation_bytes"
     printf 'runtime_bytecode_bytes=%s\n' "$runtime_bytes"
     printf 'abi_json_bytes=%s\n' "$abi_bytes"

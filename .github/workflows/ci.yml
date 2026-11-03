@@ -26,8 +26,8 @@ jobs:
       - name: Verify EVM and native targets
         run: make verify
 
-      - name: Measure EVM artifacts
-        run: make metrics
+      - name: Check versioned EVM interface and metrics
+        run: make abi-check
 
       - name: Run reproducible golden demo
         run: make demo

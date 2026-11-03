@@ -86,6 +86,11 @@ The shared kernel constructs the complete DCG1 bytes on this path, but the
 current EVM ABI returns the full scalar/fill result and checksum rather than
 copying those bytes into returndata.
 
+The [versioned EVM interface](EVM.md) pins the compiler-emitted v1 ABI, canonical
+selector, and a complete raw call/return golden. The golden adapter test also
+compares every returned field with an independently invoked shared-core outcome;
+checksum equality alone is not accepted as conformance evidence.
+
 ### Native
 
 The native ingot exposes

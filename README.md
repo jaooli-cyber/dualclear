@@ -105,6 +105,20 @@ directly to verify the native executable's emitted bytes.
 
 Build and test commands remain available separately through `make help`.
 
+### Versioned EVM interface
+
+```sh
+make abi-check
+```
+
+The v1 integration pack contains the compiler-emitted ABI, a decoded golden,
+and complete raw calldata/returndata fixtures. The check rebuilds the ABI with
+the pinned compiler, executes the literal `0x74ad3a54` selector, and rejects
+any byte-level drift. See [EVM integration](docs/EVM.md).
+
+Success ends with `DualClear EVM v1: PASS`, including the ABI hash and exact
+wire lengths.
+
 ### Native CLI
 
 ```sh
@@ -128,6 +142,8 @@ The command prints artifact hashes and fails on snapshot drift or if the runtime
 limit is exceeded. These are size measurements, not gas claims. See
 [EVM metrics](docs/METRICS.md).
 
+`make abi-check` includes this metrics gate and the raw EVM v1 golden.
+
 ## Repository layout
 
 ```text
@@ -135,9 +151,10 @@ gate/
   core/       target-neutral clearing and cross-backend tests
   evm/        typed EVM ABI adapter and adapter tests
   native/     native Result API and bounded CLI
+abi/          frozen EVM v1 ABI and decoded/raw golden fixtures
 demo/         portable DCG1 vectors and the EVM metrics snapshot
-scripts/      pinned toolchain, verification, CLI, demo, and metrics
-docs/         architecture, CLI, metrics, security, limitations, provenance,
+scripts/      pinned toolchain, verification, CLI, demo, metrics, and ABI checks
+docs/         architecture, EVM, CLI, metrics, security, limitations, provenance,
               and AI disclosure
 ```
 
@@ -147,14 +164,17 @@ The current repository was built with Fe 26.5.0:
 
 - EVM/Sonatina release build: pass;
 - shared core under Sonatina: 17/17;
-- EVM adapter under Sonatina: 10/10;
+- EVM adapter under Sonatina: 12/12;
 - native release build and executable: pass;
 - the same shared core under native: 17/17;
 - native wrapper under native: 4/4;
 - invalid inputs return typed `InputError` values through `clear_checked`
   and the native `clear_native` API;
 - native CLI parser and boundary matrix: 26/26;
-- EVM runtime bytecode: 7,931 bytes with 16,645 bytes EIP-170 headroom.
+- emitted EVM target: Osaka; destination-chain compatibility is not assumed;
+- EVM runtime bytecode: 7,931 bytes with 16,645 bytes EIP-170 headroom;
+- frozen ABI v1 and exact 484-byte calldata / 416-byte returndata golden:
+  pass.
 
 The project is a working prototype, not a production exchange or audited
 settlement system.
@@ -169,8 +189,9 @@ The DCG1 FNV-1a64 value is only an interoperability checksum. It is **not**
 collision-resistant and must never be used as a cryptographic commitment,
 signature, or proof.
 
-Read [Native CLI](docs/CLI.md), [EVM metrics](docs/METRICS.md),
-[Security](docs/SECURITY.md), and [Limitations](docs/LIMITATIONS.md).
+Read [EVM integration](docs/EVM.md), [Native CLI](docs/CLI.md),
+[EVM metrics](docs/METRICS.md), [Security](docs/SECURITY.md), and
+[Limitations](docs/LIMITATIONS.md).
 
 ## Contest disclosure
 

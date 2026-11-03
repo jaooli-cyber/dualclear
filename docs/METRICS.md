@@ -7,7 +7,8 @@ and build profile used by verification:
   `3732fbe8a6e9d2ea3925d02d0e3a1478bc1e01d742c2be75d3ea7300c46c45f0`;
 - Sonatina backend;
 - release profile;
-- optimizer level `O1`.
+- optimizer level `O1`;
+- emitted metadata `evmVersion`: `osaka`.
 
 Run:
 
@@ -15,11 +16,21 @@ Run:
 make metrics
 ```
 
+CI uses the stricter superset:
+
+```sh
+make abi-check
+```
+
 The command verifies the compiler version and binary hash, rebuilds the EVM
 adapter, validates non-empty even-length hexadecimal bytecode, and measures the
-ABI JSON. It prints stable `key=value` data and compares it byte-for-byte with
-the versioned `demo/evm-metrics.env` snapshot. Compiler progress is sent to
-stderr. Generated artifacts stay under `out/metrics/` and are not committed.
+ABI JSON. It also requires exactly one emitted metadata `evmVersion` and pins
+that value in the snapshot. Before accepting the metrics, it compares the
+emitted ABI
+byte-for-byte with `abi/DualClearGate.v1.json`. It then prints stable
+`key=value` data and compares it byte-for-byte with the versioned
+`demo/evm-metrics.env` snapshot. Compiler progress is sent to stderr.
+Generated artifacts stay under `out/metrics/` and are not committed.
 
 ## Current snapshot
 
@@ -37,10 +48,31 @@ order, the workspace manifest plus the core and EVM ingot manifests and source
 files. This binds the artifacts to all source inputs used by the EVM build
 without requiring Git metadata.
 
+The snapshot records `abi_fixture_version=v1`, keeping the interface label
+visible beside the artifact hashes. A change can pass only when compiler output,
+the fixture, and the source-bound snapshot are deliberately updated together;
+repository policy requires such an intentional interface change to introduce a
+new version rather than rewriting v1.
+
 The deployed runtime has 16,645 bytes of headroom below the
 [EIP-170](https://eips.ethereum.org/EIPS/eip-170) limit of 24,576 bytes.
-`scripts/metrics.sh` fails if that limit is exceeded or the versioned snapshot
-drifts. CI runs both checks on every pull request and push to `main`.
+`scripts/metrics.sh` fails if that limit is exceeded, the emitted ABI differs
+from v1, or the versioned snapshot drifts.
+
+## Versioned interface gate
+
+`make abi-check` first runs the metrics gate. It then:
+
+1. validates the committed ABI, calldata, and returndata fixtures as regular,
+   non-symlinked files;
+2. executes the adapter through a literal raw `0x74ad3a54` calldata payload;
+3. extracts the single external call from Fe's call trace; and
+4. compares the complete calldata and returndata byte-for-byte with the v1
+   fixtures.
+
+CI runs this full check on every pull request and push to `main`. The ABI and
+raw wire format are documented in [EVM integration](EVM.md). Any intentional
+interface change requires a new version instead of rewriting v1.
 
 ## What these numbers do not claim
 
