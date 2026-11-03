@@ -114,27 +114,35 @@ El estado permanece `HOLD` porque `GATE-LOG.md:25-28` prueba solo fmt/check y `G
 6. Evidencia observable de errores por target para cada precondición de `gate/core/src/lib.fe:171-189` y para el límite EVM.
 7. Registro final de S0/S1: cerrado, aceptado con claim limitada o causa exacta de `PLAN B`/`KILL`.
 
-## Conclusión
+## Pre-execution conclusion (superseded)
 
 No se identifica un S0 estático nuevo. El hardening mejora la calidad del candidato y mantiene un camino plausible a `GO`, pero el dictamen sigue siendo `HOLD`: solo la ejecución satisfactoria y reproducible de ambos backends, junto con la matriz negativa/extrema, permite levantarlo.
 
-+
-+## Red Team closure after empirical execution
-+
-+- **S0:** none open on the evaluated commit `41707de`.
-+- The initial invalid-opcode rejection was reproduced, classified, and fixed
-+  by using proper assertions and then a portable validation predicate.
-+- Sonatina and native executed the same 15-case core corpus successfully,
-+  including golden, permutation, both remainder tie-break paths, cardinality
-+  0/16/17, invalid supply/quantity/IDs/demand, and maximum u64/u256 values.
-+- Both adapters and the standalone native canary passed. No cross-backend
-+  divergence was observed in clearing price, fills, order, conservation, or
-+  the golden fingerprint.
-+- **S1 accepted limitation:** native invalid direct calls trap; callers have
-+  an explicit `valid_input` preflight. Prefer a typed `Result` API before a
-+  production-quality native integration.
-+- **S2 claim limits:** FNV is not a security commitment, and EVM cardinality
-+  checks do not protect the ABI decoder from pre-materialization cost.
-+
-+Red Team technical verdict: **GO**, with those claims and native API
-+hardening kept visible.
+The empirical closure below supersedes this historical HOLD.
+
+## Red Team closure after empirical execution
+
+- **S0:** none open on the evaluated commit `41707de`.
+- The initial invalid-opcode rejection was reproduced, classified, and fixed
+  by using proper assertions and then a portable validation predicate.
+- Sonatina and native executed the same 15-case core corpus successfully,
+  including golden, permutation, both remainder tie-break paths, cardinality
+  0/16/17, invalid supply/quantity/IDs/demand, and maximum u64/u256 values.
+- Both adapters and the standalone native canary passed. No cross-backend
+  divergence was observed in clearing price, fills, order, conservation, or
+  the golden fingerprint.
+- **S2 API limitation:** native invalid direct calls trap; callers have an
+  explicit `valid_input` preflight. Prefer a typed `Result` API before a
+  production-quality native integration.
+- **S2 trust-model limitation:** IDs break equal-remainder ties. The trusted
+  venue/batch builder must assign unique IDs under a deterministic policy;
+  bidder-chosen IDs would make the tie-break strategically selectable.
+- **S2 claim limits:** FNV is not a security commitment; EVM cardinality checks
+  do not protect the ABI decoder from pre-materialization cost; and the
+  four-bid 284-byte golden is fixed indirectly by format plus fingerprint, not
+  shipped as a standalone byte-vector fixture.
+- Exact invocation templates are in `GATE-RUNBOOK.md`; final logs preserve
+  timestamps, results and return codes, while manifests bind inputs/outputs.
+
+Red Team technical verdict: **GO**, with those claims and native API
+hardening kept visible.

@@ -41,3 +41,10 @@ The agreed four-bid golden is 284 bytes and has FNV-1a64
 `0xf85927c169cff4f1`. This is a deterministic cross-backend fingerprint only.
 FNV-1a64 is not collision-resistant and must not be treated as a security
 commitment, signature, or proof.
+
+IDs are part of the allocation policy: lower IDs win an exact equal-remainder
+tie. A deployment must have the trusted venue or batch builder assign unique
+IDs under a documented deterministic policy. Letting bidders choose IDs would
+make that tie-break strategically selectable. Native integrations should call
+`valid_input` before `clear`; invalid direct native calls currently trap
+rather than return a typed result.
