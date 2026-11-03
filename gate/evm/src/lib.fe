@@ -24,7 +24,7 @@ pub contract DualClearGate {
 
     recv DualClearMsg {
         Clear { supply, bids } -> (u256, u64, u64, DynArray<FillOutput>) {
-            core::assert(bids.len() > 0 && bids.len() <= MAX_BIDS)
+            assert!(bids.len() > 0 && bids.len() <= MAX_BIDS)
             var core_bids = MemVec<Bid>::with_capacity(bids.len())
             var index: usize = 0
             while index < bids.len() {
