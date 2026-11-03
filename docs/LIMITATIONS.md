@@ -26,3 +26,12 @@ claim, not hidden implementation details.
    `fingerprint` are consistent when returned by the kernel. Prototype callers
    must treat them as immutable; mutating one field later does not recompute the
    others.
+10. **Host argument boundary.** The native CLI uses Fe 26.5's `argc/argv`
+    bridge. The host locates each NUL terminator before the parser's 20/78-digit
+    limits apply. Operating-system argument limits bound this, but the CLI is
+    not an unbounded remote service.
+11. **Buffered native output.** Fe 26.5's native host API does not expose a
+    fallible final flush. A late write failure may therefore leave incomplete
+    output even when `main` returned zero. Consumers must validate the complete
+    DCG1 line and their own transport; DualClear does not promise an exit code
+    for this host-runtime condition.

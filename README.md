@@ -105,16 +105,28 @@ directly to verify the native executable's emitted bytes.
 
 Build and test commands remain available separately through `make help`.
 
+### Native CLI
+
+```sh
+make test-cli
+```
+
+The executable accepts
+`SUPPLY ID PRICE_RAW QUANTITY [ID PRICE_RAW QUANTITY]...` for 1 to 16 bids.
+It emits canonical DCG1 on success and remains silent with a stable nonzero
+exit code on malformed or invalid input. See [Native CLI](docs/CLI.md).
+
 ## Repository layout
 
 ```text
 gate/
   core/       target-neutral clearing and cross-backend tests
   evm/        typed EVM ABI adapter and adapter tests
-  native/     native wrapper and canonical-output executable
-demo/         portable golden vector
-scripts/      pinned toolchain, verification, and demo entrypoints
-docs/         architecture, security, limitations, provenance, and AI disclosure
+  native/     native Result API and bounded CLI
+demo/         portable DCG1 conformance vectors
+scripts/      pinned toolchain, verification, CLI, and demo entrypoints
+docs/         architecture, CLI, security, limitations, provenance,
+              and AI disclosure
 ```
 
 ## Current verified status
@@ -128,7 +140,8 @@ The current repository was built with Fe 26.5.0:
 - the same shared core under native: 17/17;
 - native wrapper under native: 4/4;
 - invalid inputs return typed `InputError` values through `clear_checked`
-  and the native `clear_native` API.
+  and the native `clear_native` API;
+- native CLI parser and boundary matrix: 26/26.
 
 The project is a working prototype, not a production exchange or audited
 settlement system.
@@ -143,7 +156,7 @@ The DCG1 FNV-1a64 value is only an interoperability checksum. It is **not**
 collision-resistant and must never be used as a cryptographic commitment,
 signature, or proof.
 
-Read [Security](docs/SECURITY.md) and
+Read [Native CLI](docs/CLI.md), [Security](docs/SECURITY.md), and
 [Limitations](docs/LIMITATIONS.md) before integrating the kernel.
 
 ## Contest disclosure
