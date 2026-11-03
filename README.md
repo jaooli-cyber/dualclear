@@ -10,7 +10,7 @@ between off-chain simulation and on-chain settlement: the same order book,
 supply, algorithm, ordering rules, and arithmetic produce the same clearing
 price and fills on both backends.
 
-DualClear is an entry for the
+DualClear is registered as project **FE-013** in the
 [Fe Builders Challenge 2026](https://fe-lang.org/contest/).
 
 ## Why this matters
