@@ -10,6 +10,10 @@ The gate is a Fe workspace with one target-neutral implementation:
 - `gate/evm`: Solidity-compatible ABI input/output adapter with a pre-allocation bound.
 - `gate/native`: native entry point and a reusable `MemVec<Bid>` adapter.
 
+The typed EVM ABI has already materialized the dynamic bid array before the
+handler runs. Its precheck therefore prevents only the adapter's second
+`MemVec` allocation and copy; it is not a decode-time calldata bound.
+
 Both adapters call the same `dualclear_core::clear`; neither reimplements the
 allocation algorithm. Inputs contain 1 to 16 positive-quantity bids with unique
 caller-assigned IDs, positive supply, and aggregate demand at least equal to

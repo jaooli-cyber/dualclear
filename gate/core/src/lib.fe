@@ -395,3 +395,45 @@ fn equal_remainders_award_the_lower_id_first() {
     core::assert(outcome.fills[0].id == 4 && outcome.fills[0].quantity == 1)
     core::assert(outcome.fills[1].id == 8 && outcome.fills[1].quantity == 0)
 }
+
+#[test]
+fn larger_remainder_beats_the_lower_id() {
+    var bids = MemVec<Bid>::with_capacity(2)
+    bids.push(
+        Bid { id: 1, price: Price::from_raw(2000000), quantity: 2 },
+    )
+    bids.push(
+        Bid { id: 9, price: Price::from_raw(2000000), quantity: 1 },
+    )
+
+    let outcome = clear(bids, supply: 2)
+    core::assert(outcome.fills[0].id == 1 && outcome.fills[0].quantity == 1)
+    core::assert(outcome.fills[1].id == 9 && outcome.fills[1].quantity == 1)
+}
+
+#[test]
+fn maximum_bid_count_with_exact_demand_conserves_supply() {
+    core::assert(MAX_BIDS == 16)
+    var bids = MemVec<Bid>::with_capacity(MAX_BIDS)
+    var index: usize = 0
+    while index < MAX_BIDS {
+        let id: u64 = ((MAX_BIDS - index) as u256).downcast_unchecked()
+        bids.push(Bid { id, price: Price::from_raw(1000000), quantity: 1 })
+        index += 1
+    }
+
+    let outcome = clear(bids, supply: 16)
+    core::assert(outcome.filled == 16)
+    core::assert(outcome.fills.len() == MAX_BIDS)
+    core::assert(outcome.fills[0].id == 1)
+    core::assert(outcome.fills[MAX_BIDS - 1].id == 16)
+
+    var total: u256 = 0
+    index = 0
+    while index < outcome.fills.len() {
+        core::assert(outcome.fills[index].quantity == 1)
+        total += outcome.fills[index].quantity as u256
+        index += 1
+    }
+    core::assert(total == 16)
+}
