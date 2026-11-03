@@ -37,6 +37,24 @@ Large local toolchain and evidence artifacts are intentionally excluded from
 Git. The public repository provides pinned installation and reproducible
 commands so the accepted results can be regenerated.
 
+## Versioned EVM fixture provenance
+
+`abi/DualClearGate.v1.json` is the exact ABI emitted by the pinned Fe compiler
+for the release/O1 EVM build. Its SHA-256 is
+`c2a85bd931e18118d85f4fd2a9046bc52ad028945485ed6328cecab0fc54d714`.
+
+The raw v1 calldata and returndata fixtures were captured from the successful
+literal-selector EVM test trace and are reproduced by `make abi-check`. Their
+SHA-256 values are:
+
+- calldata:
+  `33cee4f3da8f6713a2b44248aa068ac7cf81bdfa2fe4ec0408bc2200a47c743d`;
+- returndata:
+  `fa8e437f79deab94526435e3d3e605993f37c283b946628b494d6ba1deb53b42`.
+
+The check rebuilds and compares these artifacts; it does not regenerate or
+rewrite the committed v1 fixtures.
+
 ## Reused material
 
 No third-party application code was copied into the project. DualClear depends

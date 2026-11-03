@@ -1,0 +1,36 @@
+{
+  "interface": "DualClearGate v1",
+  "function_signature": "clear(uint64,(uint64,uint256,uint64)[])",
+  "selector": "0x74ad3a54",
+  "input": {
+    "supply": "7",
+    "bids": [
+      { "id": "2", "price_raw": "2000000", "quantity": "5" },
+      { "id": "3", "price_raw": "1000000", "quantity": "7" },
+      { "id": "9", "price_raw": "3000000", "quantity": "2" },
+      { "id": "1", "price_raw": "2000000", "quantity": "5" }
+    ]
+  },
+  "output": {
+    "clearing_price_raw": "2000000",
+    "filled": "7",
+    "fingerprint_u64_hex": "0xf85927c169cff4f1",
+    "fills": [
+      { "id": "9", "quantity": "2" },
+      { "id": "1", "quantity": "3" },
+      { "id": "2", "quantity": "2" },
+      { "id": "3", "quantity": "0" }
+    ]
+  },
+  "raw_calldata": {
+    "file": "DualClearGate.v1.calldata.hex",
+    "bytes": 484,
+    "sha256": "33cee4f3da8f6713a2b44248aa068ac7cf81bdfa2fe4ec0408bc2200a47c743d"
+  },
+  "raw_returndata": {
+    "file": "DualClearGate.v1.returndata.hex",
+    "bytes": 416,
+    "sha256": "fa8e437f79deab94526435e3d3e605993f37c283b946628b494d6ba1deb53b42"
+  },
+  "integer_encoding": "Input/output numeric fields use decimal strings; fingerprint uses hexadecimal."
+}
