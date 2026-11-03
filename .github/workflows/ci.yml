@@ -3,6 +3,7 @@ name: ci
 on:
   push:
     branches: ["main"]
+    tags: ["fe-013-submission-v*"]
   pull_request:
   workflow_dispatch:
 
@@ -22,12 +23,37 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      # checkout rewrites an event tag ref to its commit after fetching it;
+      # restore the remote annotated object before evidence validation.
+      - name: Restore annotated release tag
+        if: ${{ startsWith(github.ref, 'refs/tags/fe-013-submission-v') }}
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          git fetch --force --no-tags origin \
+            "refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
+          test "$(git cat-file -t "refs/tags/${RELEASE_TAG}")" = tag
+          test "$(git rev-list -n 1 "refs/tags/${RELEASE_TAG}")" = \
+            "$GITHUB_SHA"
 
-      - name: Verify EVM and native targets
-        run: make verify
+      - name: Verify complete submission candidate
+        if: ${{ !startsWith(github.ref, 'refs/tags/fe-013-submission-v') }}
+        run: make candidate
 
-      - name: Check versioned EVM interface and metrics
-        run: make abi-check
+      - name: Verify and package release evidence
+        if: ${{ startsWith(github.ref, 'refs/tags/fe-013-submission-v') }}
+        run: make release-evidence EVIDENCE_TAG="$GITHUB_REF_NAME"
 
-      - name: Run reproducible golden demo
-        run: make demo
+      - name: Upload release evidence
+        if: ${{ startsWith(github.ref, 'refs/tags/fe-013-submission-v') }}
+        # actions/upload-artifact v7.0.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: FE-013-evidence-${{ github.ref_name }}
+          path: out/release-evidence/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 90

@@ -54,14 +54,20 @@ The bundle is excluded from the submission repository.
 
 Judging evidence is regenerated from the exact submitted checkout:
 
+- `make candidate` executes every submission gate serially;
 - `make demo` runs the short cross-backend handoff;
 - `make abi-check` rebuilds and verifies artifacts, ABI, and raw EVM wire data;
-- `make verify` runs the complete build and test matrix.
+- `make verify` runs the complete build and test matrix; and
+- `make release-evidence EVIDENCE_TAG=fe-013-submission-v1` packages source
+  hashes and deterministic generated artifacts after rerunning all gates.
 
-The GitHub Actions workflow runs those same three gates for pull requests and
-every push to `main`. The contest form receives the exact full commit SHA
-selected for judging; this document intentionally does not hard-code a moving
-candidate SHA. See [the judge handoff](../JUDGING.md).
+GitHub Actions runs the complete candidate gate for pull requests and every
+push to `main`. A candidate-tag run restores and verifies the annotated tag,
+reruns the same gates, and uploads the evidence package. The contest form
+receives the exact full commit SHA selected for judging; this document does not
+hard-code that candidate SHA. Annotated tag `fe-013-submission-v1` points to
+the same commit, and its release retains the evidence manifests and bundle.
+See [the judge handoff](../JUDGING.md).
 
 ## Versioned EVM fixture provenance
 
