@@ -6,6 +6,8 @@ The Fe Builders Challenge 2026 build window opened on
 **2026-11-03 00:00:00 UTC**. This repository was initialized and all Fe source,
 tests, scripts, documentation, and build evidence were authored after that
 boundary.
+The official contest registration identifier is **FE-013**.
+
 
 Precontest activity consisted of research, specification, threat modelling,
 non-compilable pseudocode, and test planning. That material remains separate.
