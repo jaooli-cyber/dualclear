@@ -1,23 +1,30 @@
 # DualClear — matriz de tests post-H0
 
-- Fecha de corte: `2026-11-03T04:12:39Z`.
-- Baseline inventariada: `5d27a5ddd10f51e831bdce3fc5f545cf5be05130`.
+- Fecha de corte: `2026-11-03T04:28:55Z`.
+- Baseline documental revisada: `10ad9ef5f1391e31f743006c6d0379eeb7016c05`; última baseline con cambios de tests: `5d27a5ddd10f51e831bdce3fc5f545cf5be05130`.
 - Toolchain objetivo: Fe 26.5.0, commit `3dab95f`.
-- Estado global: **AUTHORED / STATIC-CHECKED / NOT EXECUTED**.
+- Estado global: **AUTHORED / STATIC-CHECKED / NOT EXECUTED**; gate **HOLD (RG-STOP)**.
 - Regla de evidencia: ningún caso cambia a `EXECUTED-PASS` o `EXECUTED-FAIL` sin comando literal, UTC, commit, target, RC y log conservado.
 
 ## Semántica de estados
 
 - `AUTHORED`: el test fuente existe cuando se cita un símbolo; en matrices de cobertura, la especificación del caso está escrita aunque una celda pueda indicar `GAP` de implementación.
 - `STATIC-CHECKED`: nombre, input, assertions y resultado esperado se revisaron contra el código actual. No significa que se haya invocado el compilador ni el test runner sobre esta baseline.
-- `NOT EXECUTED`: no existe evidencia de ejecución para esta baseline. `GATE-LOG.md:29-31` mantiene build/test EVM y nativo pendientes.
-- `GAP`: no hay test fuente actual para ese caso/backend. Un `GAP` no puede presentarse como cobertura ejecutada.
+- `NOT EXECUTED`: no existe evidencia de ejecución para esta baseline. `GATE-LOG.md:29-32` mantiene build/test pendientes y el gate en `HOLD (RG-STOP)`.
+- `CORE-SONATINA`: ejecución directa del ingot `dualclear_core` con backend Sonatina, según `GATE-RUNBOOK.md:184-199`.
+- `CORE-NATIVE`: segunda ejecución completa del mismo ingot `dualclear_core` con backend native, según `GATE-RUNBOOK.md:254-270`.
+- `GAP`: falta un test del adaptador EVM o del wrapper nativo. Nunca se usa para C01-C15: el runbook ejecuta toda esa suite bajo ambos backends.
 
 Todos los casos y especificaciones de este documento permanecen **AUTHORED / STATIC-CHECKED / NOT EXECUTED** hasta que se adjunte la evidencia definida al final.
 
 ## Inventario actual — ingot `dualclear_core`
 
-Backend de ejecución previsto: test runner del ingot core compartido. Sus resultados son prerrequisito para EVM y nativo, pero no sustituyen los tests de adaptador.
+La misma suite C01-C15 se ejecutará completa dos veces:
+
+- `CORE-SONATINA`: `dualclear_core` bajo backend Sonatina.
+- `CORE-NATIVE`: `dualclear_core` bajo backend native.
+
+Las dos ejecuciones son evidencia cross-backend del core compartido. No sustituyen E01-E03 ni N01, que ejercitan las fronteras de adaptador.
 
 | ID | Test fuente | Requisito/caso | Resultado esperado | Estado |
 | --- | --- | --- | --- | --- |
@@ -39,7 +46,7 @@ Backend de ejecución previsto: test runner del ingot core compartido. Sus resul
 
 ## Inventario actual — ingot `dualclear_evm`
 
-Backend de ejecución previsto: harness EVM del ingot y llamada ABI a `DualClearGate`.
+Backend de ejecución previsto: Sonatina sobre el ingot `dualclear_evm`. E01-E03 son tests de adaptador/ABI y se ejecutan aparte de C01-C15 bajo `CORE-SONATINA`.
 
 | ID | Test fuente | Requisito/caso | Resultado esperado | Estado |
 | --- | --- | --- | --- | --- |
@@ -51,7 +58,7 @@ Nota: E02/E03 validan el precheck del handler, no una cota de materialización d
 
 ## Inventario actual — ingot `dualclear_native`
 
-Backend de ejecución previsto: test runner nativo; el mismo canario también alimenta `main()`.
+Backend de ejecución previsto: native sobre el ingot `dualclear_native`. N01 prueba el wrapper y el mismo canario alimenta `main()`; se ejecuta aparte de C01-C15 bajo `CORE-NATIVE`.
 
 | ID | Test fuente | Requisito/caso | Resultado esperado | Estado |
 | --- | --- | --- | --- | --- |
@@ -59,45 +66,45 @@ Backend de ejecución previsto: test runner nativo; el mismo canario también al
 
 ## Matriz cross-backend
 
-Cada fila especifica el corpus que debe compararse. Una referencia C/E/N indica test fuente actual; `GAP` exige autoría futura antes de poder afirmar cobertura de ese backend.
+C01-C15 se ejecutan sin huecos una vez como `CORE-SONATINA` y otra como `CORE-NATIVE`. Las columnas de adaptador son independientes: un `GAP` allí significa que el caso no atraviesa actualmente esa frontera ABI/wrapper, no que falte la comparación del core entre backends.
 
-| Caso | Core | EVM | Nativo | Igualdad/expected cross-backend | Estado |
-| --- | --- | --- | --- | --- | --- |
-| Golden 4 bids | C02 | E01 | N01 | Price, filled, orden/fills y FNV exactamente iguales. DCG1 canónico: 284 bytes; FNV `0xf85927c169cff4f1`. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
-| Permutación del golden | C03 | GAP | GAP | Misma salida y fingerprint sin depender del orden de entrada. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
-| Un bid / demanda exacta | C04 | GAP | GAP | Aceptación y fill completo idénticos. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
-| Todos al mismo precio | C05 | GAP | GAP | Misma prorrata, conservación y orden por ID. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
-| Remainder igual | C06 | GAP | GAP | ID menor obtiene el asiento residual en todos los targets. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
-| Remainder desigual | C07 | GAP | GAP | Remainder mayor domina al ID menor en todos los targets. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
-| 16 bids válidos | C08 | GAP | GAP | Aceptación, 16 fills y conservación de supply. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
-| 0 bids inválidos | C09 | E02 | GAP | Rechazo; registrar forma observable por target. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
-| 17 bids inválidos | C10 | E03 | GAP | Rechazo; EVM demuestra precheck del handler, no decode-time. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
-| Supply 0 | C11 | GAP | GAP | Rechazo sin resultado parcial. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
-| Quantity 0 | C12 | GAP | GAP | Rechazo sin resultado parcial. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
-| ID duplicado | C13 | GAP | GAP | Rechazo determinista. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
-| Demanda menor que supply | C14 | GAP | GAP | Rechazo determinista. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
-| `u64::MAX` / `u256::MAX` | C15 | GAP | GAP | Preservación exacta de price, supply, filled y quantity; fingerprints iguales para el mismo input. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
+| Caso | Core/Sonatina | Core/native | Adaptador EVM/Sonatina | Wrapper native | Igualdad/expected cross-backend | Estado |
+| --- | --- | --- | --- | --- | --- | --- |
+| Golden 4 bids | C02 | C02 | E01 | N01 | Price, filled, orden/fills y FNV exactamente iguales. DCG1 canónico: 284 bytes; FNV `0xf85927c169cff4f1`. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
+| Permutación del golden | C03 | C03 | GAP | GAP | El core produce la misma salida y fingerprint en ambos backends y no depende del orden de entrada. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
+| Un bid / demanda exacta | C04 | C04 | GAP | GAP | El core acepta y llena completamente de forma idéntica en ambos backends. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
+| Todos al mismo precio | C05 | C05 | GAP | GAP | Misma prorrata, conservación y orden por ID en ambos backends del core. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
+| Remainder igual | C06 | C06 | GAP | GAP | ID menor obtiene el asiento residual bajo ambos backends del core. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
+| Remainder desigual | C07 | C07 | GAP | GAP | Remainder mayor domina al ID menor bajo ambos backends del core. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
+| 16 bids válidos | C08 | C08 | GAP | GAP | Aceptación, 16 fills y conservación de supply bajo ambos backends del core. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
+| 0 bids inválidos | C09 | C09 | E02 | GAP | El core revierte bajo ambos backends; E02 cubre además el precheck del adaptador EVM. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
+| 17 bids inválidos | C10 | C10 | E03 | GAP | El core revierte bajo ambos backends; E03 cubre el precheck EVM, no decode-time. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
+| Supply 0 | C11 | C11 | GAP | GAP | El core revierte bajo ambos backends; fronteras de adaptador no cubiertas. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
+| Quantity 0 | C12 | C12 | GAP | GAP | El core revierte bajo ambos backends; fronteras de adaptador no cubiertas. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
+| ID duplicado | C13 | C13 | GAP | GAP | El core revierte determinísticamente bajo ambos backends. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
+| Demanda menor que supply | C14 | C14 | GAP | GAP | El core revierte determinísticamente bajo ambos backends. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
+| `u64::MAX` / `u256::MAX` | C15 | C15 | GAP | GAP | El core preserva exactamente price, supply, filled y quantity bajo ambos backends; fingerprints iguales. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
 
 ## Matriz de límites 0 / 16 / 17
 
-| Cardinalidad | Validez | Core | EVM | Nativo | Expected | Estado |
-| ---: | --- | --- | --- | --- | --- | --- |
-| 0 | Inválida | C09 `should_revert` | E02 `should_revert` | GAP | Rechazo acotado; no output. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
-| 16 | Válida | C08 | GAP | GAP | Aceptación; fills len 16; suma de fills = supply. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
-| 17 | Inválida | C10 `should_revert` | E03 `should_revert` | GAP | Rechazo; en EVM ocurre antes de la segunda reserva/copia. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
+| Cardinalidad | Validez | Core/Sonatina | Core/native | Adaptador EVM | Wrapper native | Expected | Estado |
+| ---: | --- | --- | --- | --- | --- | --- | --- |
+| 0 | Inválida | C09 `should_revert` | C09 `should_revert` | E02 `should_revert` | GAP | Core revierte bajo ambos backends; EVM rechaza en el handler; no output. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
+| 16 | Válida | C08 | C08 | GAP | GAP | Core acepta bajo ambos backends; 16 fills y suma = supply. Adaptadores no cubiertos para 16. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
+| 17 | Inválida | C10 `should_revert` | C10 `should_revert` | E03 `should_revert` | GAP | Core revierte bajo ambos backends; EVM rechaza antes de la segunda reserva/copia. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
 
 ## Matriz negativa `should_revert`
 
-| Precondición violada | Test actual | Backends previstos con test actual | Backend pendiente | Expected observable | Estado |
-| --- | --- | --- | --- | --- | --- |
-| 0 bids | C09, E02 | core, EVM | nativo | Test runner acepta el revert; conservar causa/forma por target. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
-| 17 bids | C10, E03 | core, EVM | nativo | Test runner acepta el revert; EVM rechaza en precheck del handler. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
-| Supply 0 | C11 | core | EVM, nativo | Revert por `supply > 0`. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
-| Quantity 0 | C12 | core | EVM, nativo | Revert por quantity positiva. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
-| ID duplicado | C13 | core | EVM, nativo | Revert por unicidad. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
-| Demanda insuficiente | C14 | core | EVM, nativo | Revert por `total_demand >= supply`. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
+| Precondición violada | Core/Sonatina | Core/native | Adaptador EVM | Wrapper native | Expected observable | Estado |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0 bids | C09 | C09 | E02 | GAP | Revert en ambos backends del core y en handler EVM; conservar forma por target. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
+| 17 bids | C10 | C10 | E03 | GAP | Revert en ambos backends del core y en precheck EVM. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
+| Supply 0 | C11 | C11 | GAP | GAP | Revert del core por `supply > 0` bajo ambos backends. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
+| Quantity 0 | C12 | C12 | GAP | GAP | Revert del core por quantity positiva bajo ambos backends. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
+| ID duplicado | C13 | C13 | GAP | GAP | Revert del core por unicidad bajo ambos backends. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
+| Demanda insuficiente | C14 | C14 | GAP | GAP | Revert del core por `total_demand >= supply` bajo ambos backends. | AUTHORED / STATIC-CHECKED / NOT EXECUTED |
 
-La aceptación de `#[test(should_revert)]` solo prueba que ocurrió un revert. La evidencia de gate debe capturar además si EVM y nativo exponen panic/revert/código de salida diferentes y confirmar ausencia de output parcial.
+C09-C14 comparan la semántica de rechazo del core bajo Sonatina y native. La aceptación de `#[test(should_revert)]` solo prueba que ocurrió un revert; no demuestra la frontera ABI/wrapper donde la tabla marca `GAP`, ni una forma de error estable más allá del rechazo.
 
 ## Golden DCG1 / FNV
 
@@ -113,20 +120,26 @@ C02, E01 y N01 comparan el fingerprint, pero ningún test actual expone o aserta
 
 ## Orden de ejecución previsto
 
-1. Core completo C01-C15, incluidos todos los `should_revert`.
-2. EVM E01-E03.
-3. Nativo N01.
-4. Tras cubrir los `GAP`, repetir el mismo corpus en EVM y nativo y comparar outputs campo por campo.
-5. Ejecutar una reproducción independiente de los 284 bytes DCG1 y su FNV.
+El orden sigue `GATE-RUNBOOK.md` y es serial:
 
-Un fallo de core detiene los adaptadores. Un fallo de adaptador no invalida automáticamente el core, pero impide una claim cross-backend hasta aislarse.
+1. Build del adaptador EVM con Sonatina; no cuenta como test.
+2. `CORE-SONATINA`: C01-C15 completos (`20-sonatina-core-tests.log`).
+3. Adaptador EVM/Sonatina: E01-E03 (`30-sonatina-adapter-tests.log`).
+4. Repetir resource guard antes de la fase native.
+5. Build del ejecutable nativo; no cuenta como test.
+6. Ejecutar el canario nativo de `main()` sobre el golden (`50-native-run.log`).
+7. `CORE-NATIVE`: los mismos C01-C15 completos (`60-native-core-tests.log`).
+8. Wrapper nativo: N01 (`70-native-wrapper-tests.log`).
+9. Comparar resultados de C01-C15 entre backends, outputs de los adapters donde exista cobertura y reproducir independientemente DCG1 284/FNV.
+
+Un fallo reproducible del core en cualquiera de los dos backends detiene el gate. Un fallo de adaptador no invalida automáticamente el core, pero impide la claim de ese adaptador hasta aislarse. Los `GAP` de adaptador no borran la cobertura cross-backend directa de C01-C15.
 
 ## Evidencia mínima por ejecución
 
 Para cambiar cualquier fila desde `NOT EXECUTED`:
 
 1. Registrar commit exacto y confirmar árbol limpio.
-2. Registrar binario Fe, versión `26.5.0`, hash `3dab95f` y target.
+2. Registrar binario Fe, versión `26.5.0`, hash `3dab95f`, ingot y backend exactos.
 3. Conservar comando literal, UTC de inicio/fin, RC y stdout/stderr completos.
 4. Conservar el listado de tests descubiertos para detectar skips o filtros accidentales.
 5. Para golden/cross-backend, adjuntar expected y actual de cada campo, los 284 bytes o su dump reproducible y FNV.
@@ -135,4 +148,6 @@ Para cambiar cualquier fila desde `NOT EXECUTED`:
 
 ## Estado de salida
 
-Esta matriz documenta 19 tests fuente actuales: 15 core, 3 EVM y 1 nativo. Todos están **AUTHORED / STATIC-CHECKED / NOT EXECUTED**. Los `GAP` cross-backend son explícitos y no cuentan como tests implementados ni ejecutados.
+Esta matriz documenta 19 tests fuente actuales: 15 core, 3 EVM y 1 nativo. El plan produce 30 ejecuciones directas del core (C01-C15 bajo Sonatina y de nuevo bajo native), 3 del adaptador EVM y 1 del wrapper nativo, además del canario ejecutable nativo.
+
+Todos permanecen **AUTHORED / STATIC-CHECKED / NOT EXECUTED**. C01-C15 no tienen `GAP` entre backends; los `GAP` restantes describen exclusivamente casos que aún no atraviesan un adaptador concreto.
