@@ -1,11 +1,23 @@
-use core::ptr::MemVec
-use dualclear_core::{Bid, GOLDEN_FINGERPRINT, InputError, Outcome, Price, clear_checked}
+use core::ptr::{MemSlice, MemVec}
+use dualclear_core::{
+    Bid,
+    GOLDEN_FINGERPRINT,
+    InputError,
+    MAX_VALUES_DCG1_LENGTH,
+    MAX_VALUES_FINGERPRINT,
+    Outcome,
+    Price,
+    TIE_BREAK_DCG1_LENGTH,
+    TIE_BREAK_FINGERPRINT,
+    clear_checked,
+}
+use std::io::{Write, host, write, write_char}
 
 pub fn clear_native(_ bids: own MemVec<Bid>, _ supply: u64) -> Result<InputError, Outcome> {
     clear_checked(bids, supply)
 }
 
-fn native_golden_matches() -> bool {
+fn golden_input() -> MemVec<Bid> {
     var bids = MemVec<Bid>::with_capacity(4)
     bids.push(
         Bid { id: 3, price: Price::from_raw(1000000), quantity: 7 },
@@ -19,28 +31,68 @@ fn native_golden_matches() -> bool {
     bids.push(
         Bid { id: 9, price: Price::from_raw(3000000), quantity: 2 },
     )
+    bids
+}
 
-    match clear_native(bids, supply: 7) {
-        Result::Ok(outcome) => {
-            outcome.clearing_price_raw == 2000000
-                && outcome.filled == 7
-                && outcome.fingerprint == GOLDEN_FINGERPRINT
-                && outcome.fills.len() == 4
-                && outcome.fills[0].id == 9
-                && outcome.fills[0].quantity == 2
-                && outcome.fills[1].id == 1
-                && outcome.fills[1].quantity == 3
-                && outcome.fills[2].id == 2
-                && outcome.fills[2].quantity == 2
-                && outcome.fills[3].id == 3
-                && outcome.fills[3].quantity == 0
-        },
+fn golden_outcome_matches(_ outcome: Outcome) -> bool {
+    outcome.clearing_price_raw == 2000000
+        && outcome.filled == 7
+        && outcome.fingerprint == GOLDEN_FINGERPRINT
+        && outcome.fills.len() == 4
+        && outcome.fills[0].id == 9
+        && outcome.fills[0].quantity == 2
+        && outcome.fills[1].id == 1
+        && outcome.fills[1].quantity == 3
+        && outcome.fills[2].id == 2
+        && outcome.fills[2].quantity == 2
+        && outcome.fills[3].id == 3
+        && outcome.fills[3].quantity == 0
+}
+
+fn native_golden_matches() -> bool {
+    match clear_native(golden_input(), supply: 7) {
+        Result::Ok(outcome) => golden_outcome_matches(outcome),
         Result::Err(_) => false,
     }
 }
 
+fn hex_digit(_ nibble: u8) -> i32 {
+    let ascii: u8 = if nibble < 10 {
+        0x30 + nibble
+    } else {
+        0x61 + nibble - 10
+    }
+    ascii as i32
+}
+
+fn write_hex_byte(_ byte: u8) uses (w: mut Write) {
+    write_char(hex_digit(byte >> 4))
+    write_char(hex_digit(byte & 0x0f))
+}
+
+fn write_dcg1_hex(_ bytes: MemSlice<u8>) uses (w: mut Write) {
+    write("DCG1:")
+    var index: usize = 0
+    while index < bytes.len() {
+        write_hex_byte(bytes[index])
+        index += 1
+    }
+    write_char(10)
+}
+
 pub fn main() -> i32 {
-    if native_golden_matches() { 0 } else { 1 }
+    match clear_native(golden_input(), supply: 7) {
+        Result::Ok(outcome) => {
+            if !golden_outcome_matches(outcome) {
+                return 1
+            }
+            with (Write = host()) {
+                write_dcg1_hex(outcome.canonical_bytes.as_slice())
+            }
+            0
+        },
+        Result::Err(_) => 1,
+    }
 }
 
 #[test]
@@ -54,6 +106,56 @@ fn native_invalid_input_returns_typed_error() {
     match clear_native(bids, supply: 1) {
         Result::Err(InputError::EmptyBids) => {},
         _ => {
+            assert!(false)
+        },
+    }
+}
+#[test]
+fn native_adapter_matches_tie_break_vector() {
+    var bids = MemVec<Bid>::with_capacity(2)
+    bids.push(
+        Bid { id: 8, price: Price::from_raw(2000000), quantity: 1 },
+    )
+    bids.push(
+        Bid { id: 4, price: Price::from_raw(2000000), quantity: 1 },
+    )
+
+    match clear_native(bids, supply: 1) {
+        Result::Ok(outcome) => {
+            core::assert(outcome.clearing_price_raw == 2000000)
+            core::assert(outcome.filled == 1)
+            core::assert(outcome.fingerprint == TIE_BREAK_FINGERPRINT)
+            core::assert(outcome.canonical_bytes.len() == TIE_BREAK_DCG1_LENGTH)
+            core::assert(outcome.fills.len() == 2)
+            core::assert(outcome.fills[0].id == 4 && outcome.fills[0].quantity == 1)
+            core::assert(outcome.fills[1].id == 8 && outcome.fills[1].quantity == 0)
+        },
+        Result::Err(_) => {
+            assert!(false)
+        },
+    }
+}
+
+#[test]
+fn native_adapter_matches_max_values_vector() {
+    let max_quantity: u64 = 0xffffffffffffffff
+    let max_price: u256 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    var bids = MemVec<Bid>::with_capacity(1)
+    bids.push(
+        Bid { id: 1, price: Price::from_raw(max_price), quantity: max_quantity },
+    )
+
+    match clear_native(bids, supply: max_quantity) {
+        Result::Ok(outcome) => {
+            core::assert(outcome.clearing_price_raw == max_price)
+            core::assert(outcome.filled == max_quantity)
+            core::assert(outcome.fingerprint == MAX_VALUES_FINGERPRINT)
+            core::assert(outcome.canonical_bytes.len() == MAX_VALUES_DCG1_LENGTH)
+            core::assert(outcome.fills.len() == 1)
+            core::assert(outcome.fills[0].id == 1)
+            core::assert(outcome.fills[0].quantity == max_quantity)
+        },
+        Result::Err(_) => {
             assert!(false)
         },
     }
