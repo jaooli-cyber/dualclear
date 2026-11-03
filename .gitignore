@@ -1,1 +1,3 @@
 .contest-tools/
+.gate-artifacts/
+out/
