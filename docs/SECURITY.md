@@ -14,6 +14,9 @@ provide a complete auction lifecycle.
 - Consumers must not treat the FNV checksum as a cryptographic proof.
 - EVM calldata is ABI-decoded before the adapter's bid-count check.
 
+- The four-byte selector routes the ABI call; it is not authentication and is
+  not assumed collision-resistant.
+
 If bidders can select their own IDs, they can influence an exact
 equal-remainder tie. Such IDs are outside the supported trust model.
 
@@ -31,7 +34,10 @@ The test corpus covers:
 - conservation and no overfill;
 - every `InputError` variant through the typed checked API;
 - the same 17-case core corpus on Sonatina and native;
-- ten EVM adapter cases, including all six invalid-input classes and 16 bids;
+- twelve EVM adapter cases, including all six invalid-input classes and 16 bids;
+- the canonical selector plus literal raw v1 calldata/returndata equality;
+- every successful EVM outcome field compared directly with the shared-core
+  result, independently of the FNV checksum;
 - four native adapter cases, including typed rejection and extreme values;
 - materialized native DCG1 output compared byte-for-byte with fixed fixtures;
 - 26 CLI cases covering shape, ASCII parsing, overflow, bounds, and semantics.

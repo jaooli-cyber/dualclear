@@ -3,7 +3,7 @@ SHELL := /bin/bash
 FE_BIN ?= $(CURDIR)/.contest-tools/fe_linux_amd64
 export FE_BIN
 
-.PHONY: help setup verify demo test-cli metrics
+.PHONY: help setup verify demo test-cli metrics abi-check
 
 help:
 	@printf '%s\n' \
@@ -12,7 +12,8 @@ help:
 	  '  make verify    Format/check/build/test EVM, native, and CLI' \
 	  '  make demo      Run the cross-backend golden demonstration' \
 	  '  make test-cli  Run native CLI boundary and parser tests' \
-	  '  make metrics   Rebuild and measure EVM artifacts'
+	  '  make metrics   Rebuild and measure EVM artifacts' \
+	  '  make abi-check Verify the frozen ABI and raw v1 golden'
 
 setup:
 	./scripts/install-fe.sh
@@ -28,3 +29,6 @@ test-cli: setup
 
 metrics: setup
 	./scripts/metrics.sh
+
+abi-check: metrics
+	./scripts/check-abi.sh
