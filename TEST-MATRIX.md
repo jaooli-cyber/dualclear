@@ -151,3 +151,27 @@ Para cambiar cualquier fila desde `NOT EXECUTED`:
 Esta matriz documenta 19 tests fuente actuales: 15 core, 3 EVM y 1 nativo. El plan produce 30 ejecuciones directas del core (C01-C15 bajo Sonatina y de nuevo bajo native), 3 del adaptador EVM y 1 del wrapper nativo, además del canario ejecutable nativo.
 
 Todos permanecen **AUTHORED / STATIC-CHECKED / NOT EXECUTED**. C01-C15 no tienen `GAP` entre backends; los `GAP` restantes describen exclusivamente casos que aún no atraviesan un adaptador concreto.
+
++
++## Cierre empírico post-window (autoritativo)
++
++The tables above are the pre-execution planning snapshot and retain their
++historical `NOT EXECUTED` labels. They are superseded for the final evaluated
++baseline by this section.
++
++- Baseline: commit `41707de0d43d3e5bdbb412cba839af8724042d12`,
++  tree `7826e05fb6733c546854008e800380f3ea36f206`.
++- C01-C08 and C15 passed under both Sonatina and native.
++- C09-C14 were refactored into portable validation tests named
++  `empty_input_is_invalid`, `seventeen_bids_are_invalid`,
++  `zero_supply_is_invalid`, `zero_quantity_is_invalid`,
++  `duplicate_id_is_invalid`, and `demand_below_supply_is_invalid`.
++  All six passed under both backends.
++- E01-E03 passed under Sonatina.
++- N01 and the standalone native executable passed.
++- Totals: Sonatina core 15/15; EVM adapter 3/3; native core 15/15;
++  native wrapper 1/1; both builds and the native executable RC 0.
++- Evidence: `.gate-artifacts/late-final-20261103T091500Z`; manifest
++  SHA-256 `433baeef5d6083fab32ef301d44a62fa6ea0b0aa79ad994654b17e87c5134a6a`.
++
++Final post-window matrix status: **EXECUTED-PASS / technical GO**.
