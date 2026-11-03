@@ -3,6 +3,7 @@ use core::ptr::MemVec
 use dualclear_core::{
     Bid,
     GOLDEN_FINGERPRINT,
+    MAX_BIDS_FINGERPRINT,
     MAX_BIDS,
     MAX_VALUES_FINGERPRINT,
     Price,
@@ -230,4 +231,35 @@ fn evm_rejects_demand_below_supply() uses (evm: mut Evm) {
             value: Wei::zero(),
             message: DualClearMsg::Clear { supply: 2, bids },
         )
+}
+#[test]
+fn evm_adapter_matches_maximum_bid_count() uses (evm: mut Evm) {
+    let gate = evm.create2<DualClearGate>(value: Wei::zero(), args: (), salt: 10)
+    var memory_bids = MemVec<BidInput>::with_capacity(MAX_BIDS)
+    var index: usize = 0
+    while index < MAX_BIDS {
+        let id: u64 = ((MAX_BIDS - index) as u256).downcast_unchecked()
+        memory_bids.push(BidInput { id, price_raw: 1000000, quantity: 1 })
+        index += 1
+    }
+    let bids = DynArray::from_slice(memory_bids.as_slice())
+    let result: (u256, u64, u64, DynArray<FillOutput>) = evm
+        .call(
+            addr: gate,
+            gas: 2000000,
+            value: Wei::zero(),
+            message: DualClearMsg::Clear { supply: 16, bids },
+        )
+
+    core::assert(result.0 == 1000000)
+    core::assert(result.1 == 16)
+    core::assert(result.2 == MAX_BIDS_FINGERPRINT)
+    core::assert(result.3.len() == MAX_BIDS)
+    index = 0
+    while index < MAX_BIDS {
+        let expected_id: u64 = ((index + 1) as u256).downcast_unchecked()
+        core::assert(result.3.get(index).id == expected_id)
+        core::assert(result.3.get(index).quantity == 1)
+        index += 1
+    }
 }

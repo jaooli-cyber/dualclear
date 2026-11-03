@@ -11,6 +11,8 @@ pub const TIE_BREAK_FINGERPRINT: u64 = 0x74bd323e5769a443
 pub const TIE_BREAK_DCG1_LENGTH: usize = 172
 pub const MAX_VALUES_FINGERPRINT: u64 = 0x9ea66f91dd47d14c
 pub const MAX_VALUES_DCG1_LENGTH: usize = 116
+pub const MAX_BIDS_FINGERPRINT: u64 = 0x83800decd8cfd64b
+pub const MAX_BIDS_DCG1_LENGTH: usize = 956
 
 const FNV1A64_OFFSET: u64 = 0xcbf29ce484222325
 const FNV1A64_PRIME: u64 = 0x00000100000001b3
@@ -792,6 +794,8 @@ fn maximum_bid_count_with_exact_demand_conserves_supply() {
         index += 1
     }
     core::assert(total == 16)
+    core::assert(outcome.fingerprint == MAX_BIDS_FINGERPRINT)
+    core::assert(outcome.canonical_bytes.len() == MAX_BIDS_DCG1_LENGTH)
 }
 
 #[test]

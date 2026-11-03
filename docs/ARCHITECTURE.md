@@ -86,9 +86,10 @@ firewall.
 ### Native
 
 The native ingot exposes
-`clear_native(MemVec<Bid>, u64) -> Result<InputError, Outcome>` and builds a
-standalone executable whose golden canary returns zero on success. The shared
-`validate_input` and `clear_checked` functions report six explicit error
-variants, so native callers can handle invalid input without a process-level
-trap. The assertion-based `clear` function remains the thin EVM adapter's
-enforcing entrypoint.
+`clear_native(MemVec<Bid>, u64) -> Result<InputError, Outcome>`. Its standalone
+executable clears the golden input and emits the complete DCG1 representation
+as lowercase hexadecimal. The demo compares that materialized output against
+an independent fixture. The shared `validate_input` and `clear_checked`
+functions report six explicit error variants, so native callers can handle
+invalid input without a process-level trap. The assertion-based `clear`
+function remains the thin EVM adapter's enforcing entrypoint.
