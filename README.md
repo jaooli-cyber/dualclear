@@ -116,11 +116,11 @@ docs/         architecture, security, limitations, provenance, and AI disclosure
 The current repository was built with Fe 26.5.0:
 
 - EVM/Sonatina release build: pass;
-- shared core under Sonatina: 16/16;
-- EVM adapter under Sonatina: 3/3;
+- shared core under Sonatina: 17/17;
+- EVM adapter under Sonatina: 9/9;
 - native release build and executable: pass;
-- the same shared core under native: 16/16;
-- native wrapper under native: 2/2;
+- the same shared core under native: 17/17;
+- native wrapper under native: 4/4;
 - invalid inputs return typed `InputError` values through `clear_checked`
   and the native `clear_native` API.
 

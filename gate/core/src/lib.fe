@@ -7,6 +7,10 @@ use core::sort::sort
 pub const MAX_BIDS: usize = 16
 pub const GOLDEN_FINGERPRINT: u64 = 0xf85927c169cff4f1
 pub const GOLDEN_DCG1_LENGTH: usize = 284
+pub const TIE_BREAK_FINGERPRINT: u64 = 0x74bd323e5769a443
+pub const TIE_BREAK_DCG1_LENGTH: usize = 172
+pub const MAX_VALUES_FINGERPRINT: u64 = 0x9ea66f91dd47d14c
+pub const MAX_VALUES_DCG1_LENGTH: usize = 116
 
 const FNV1A64_OFFSET: u64 = 0xcbf29ce484222325
 const FNV1A64_PRIME: u64 = 0x00000100000001b3
@@ -744,6 +748,8 @@ fn equal_remainders_award_the_lower_id_first() {
     let outcome = clear(bids, supply: 1)
     core::assert(outcome.fills[0].id == 4 && outcome.fills[0].quantity == 1)
     core::assert(outcome.fills[1].id == 8 && outcome.fills[1].quantity == 0)
+    core::assert(outcome.fingerprint == TIE_BREAK_FINGERPRINT)
+    core::assert(outcome.canonical_bytes.len() == TIE_BREAK_DCG1_LENGTH)
 }
 
 #[test]
@@ -932,4 +938,6 @@ fn maximum_u64_quantity_and_u256_price_are_preserved() {
     core::assert(outcome.fills.len() == 1)
     core::assert(outcome.fills[0].id == 1)
     core::assert(outcome.fills[0].quantity == max_quantity)
+    core::assert(outcome.fingerprint == MAX_VALUES_FINGERPRINT)
+    core::assert(outcome.canonical_bytes.len() == MAX_VALUES_DCG1_LENGTH)
 }

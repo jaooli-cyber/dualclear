@@ -21,8 +21,9 @@ A bid contains:
 - a positive `u64` quantity.
 
 An outcome contains the raw clearing price, total filled supply, ranked fills,
-and an interoperability fingerprint. The current prototype accepts 1 to 16
-bids and positive supply no greater than aggregate demand.
+the complete canonical DCG1 bytes, and an interoperability fingerprint. The
+prototype accepts 1 to 16 bids and positive supply no greater than aggregate
+demand.
 
 ## Clearing algorithm
 
@@ -67,6 +68,10 @@ All integers are unsigned, fixed-width, and big-endian:
 The four-bid golden vector occupies 284 bytes and has checksum
 `0xf85927c169cff4f1`. DCG1 is an interoperability format; its current checksum
 is not a security commitment.
+
+The golden test independently compares all 284 bytes under both Sonatina and
+native; it does not reconstruct the expected vector with the production
+encoder.
 
 ## Adapters
 
