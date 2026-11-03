@@ -82,7 +82,7 @@ Run the complete cross-backend verification:
 make verify
 ```
 
-### 60-second judge demo
+### 60-second judge demo (after setup)
 
 ```sh
 make demo
