@@ -31,8 +31,9 @@ The test corpus covers:
 - conservation and no overfill;
 - every `InputError` variant through the typed checked API;
 - the same 17-case core corpus on Sonatina and native;
-- nine EVM adapter cases, including all six invalid-input classes;
+- ten EVM adapter cases, including all six invalid-input classes and 16 bids;
 - four native adapter cases, including typed rejection and extreme values.
+- materialized native DCG1 output compared byte-for-byte with a fixed fixture.
 
 Native integrations should use `clear_native` or `clear_checked`, both of
 which return a typed `Result` for invalid input.

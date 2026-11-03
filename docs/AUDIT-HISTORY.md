@@ -46,7 +46,7 @@ the adapter matrix:
 
 - exact comparison of all 284 golden DCG1 bytes on both core backends;
 - core tests: 17/17 on Sonatina and 17/17 on native;
-- EVM adapter tests: 9/9;
+- EVM adapter tests: 10/10;
 - native adapter tests: 4/4.
 
 The post-gate technical verdict is `GO`. This is the verdict relevant to
