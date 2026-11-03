@@ -110,3 +110,32 @@
 - The two long-running external `python3` processes ended before this run.
 - Runner limits remain one serial Fe command, CPUs 6-7, one worker, nice
   level 15, and idle I/O priority.
+
++
++## Late empirical execution and repair
++
++- 2026-11-03T09:08:54Z: EVM build passed on commit `298e3ce`.
++- The first Sonatina core run exposed six negative tests halting through
++  `core::assert` as `InvalidFEOpcode` rather than a normal revert: 9 passed,
++  6 failed. This was a real testability and EVM error-semantics defect.
++- Commit `56e4ea7` changed product assertions to `assert!`; Sonatina then
++  passed 15/15 core tests and 3/3 EVM adapter tests. The native executable
++  built and returned 0, but Fe 26.5.0 rejected `should_revert` in the native
++  test runner because that annotation is EVM-only.
++- Commit `41707de` introduced the shared portable `valid_input` predicate.
++  The six invalid-boundary cases now assert the same boolean validation under
++  both backends, while `clear` enforces that predicate before sorting.
++- Fresh evaluated baseline: commit
++  `41707de0d43d3e5bdbb412cba839af8724042d12`, tree
++  `7826e05fb6733c546854008e800380f3ea36f206`.
++- Final late run: EVM build RC 0; Sonatina core 15/15; EVM adapter 3/3;
++  native build RC 0; exactly one native executable and RC 0; native core
++  15/15; native wrapper 1/1.
++- Evidence:
++  `.gate-artifacts/late-final-20261103T091500Z`.
++- Evidence manifest SHA-256:
++  `433baeef5d6083fab32ef301d44a62fa6ea0b0aa79ad994654b17e87c5134a6a`.
++- Evidence verification SHA-256:
++  `6e24cced230aff331747edd9ac44cd2a9bd2b54df13152baec64590691614781`.
++- Late technical verdict: **GO**. This does not rewrite the original
++  fixed-window KILL.

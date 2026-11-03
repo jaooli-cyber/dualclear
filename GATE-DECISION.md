@@ -53,3 +53,44 @@ At 2026-11-03T09:04Z the user required complete empirical checks of all three
 candidates. This does not rewrite the original fixed-window result. DualClear
 is reopened solely to determine technical viability through serial Sonatina
 and native build, execution, and test evidence, clearly labelled post-window.
+
++
++## Post-window technical verdict
++
++**GO** on the later user-authorized technical reassessment.
++
++The final evaluated baseline is commit
++`41707de0d43d3e5bdbb412cba839af8724042d12`, tree
++`7826e05fb6733c546854008e800380f3ea36f206`, with a clean worktree and
++Fe 26.5.0 (`3dab95f`). The fresh run produced:
++
++- EVM/Sonatina release build: RC 0.
++- Shared core under Sonatina: 15 passed, 0 failed.
++- EVM adapter under Sonatina: 3 passed, 0 failed.
++- Native release build: RC 0, exactly one executable.
++- Native executable golden canary: RC 0.
++- The same shared core under native: 15 passed, 0 failed.
++- Native wrapper under native: 1 passed, 0 failed.
++
++The first late run found a genuine `core::assert`/invalid-opcode issue. A
++second run exposed that Fe's native test runner does not support the EVM-only
++`should_revert` annotation. Both were corrected in the product/test design:
++`assert!` provides proper EVM reverts, and the shared `valid_input`
++predicate makes all six invalid boundaries directly testable on both
++backends. The final verdict uses only the fresh post-fix run.
++
++Evidence is under
++`.gate-artifacts/late-final-20261103T091500Z`. Its manifest SHA-256 is
++`433baeef5d6083fab32ef301d44a62fa6ea0b0aa79ad994654b17e87c5134a6a`;
++the verification-log SHA-256 is
++`6e24cced230aff331747edd9ac44cd2a9bd2b54df13152baec64590691614781`.
++
++Residual limitations are non-blocking but must remain explicit: FNV-1a64 is
++only an interoperability fingerprint; EVM `DynArray` cardinality is checked
++after ABI decoding; and native callers should call `valid_input` before
++`clear` because invalid direct calls trap. A future typed `Result` API would
++improve native error ergonomics. No open S0 remains.
++
++The original fixed-window verdict above remains **KILL** as an audit fact.
++The later technical result is **GO** and is the result relevant to choosing a
++candidate now.
