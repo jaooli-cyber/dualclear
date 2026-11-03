@@ -53,6 +53,10 @@ For every accepted input:
 - input permutations with the same uniquely identified bids produce the same
   ranked outcome.
 
+These per-clear invariants do not imply individual supply monotonicity or
+participant-level split resistance. See [metamorphic conformance and model
+boundaries](METAMORPHIC.md).
+
 ## DCG1 canonical representation
 
 All integers are unsigned, fixed-width, and big-endian:
