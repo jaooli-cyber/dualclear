@@ -17,34 +17,34 @@ mkdir -p -- "$OUT_DIR"
 find "$OUT_DIR" -mindepth 1 -depth -delete
 mkdir -p -- "$OUT_DIR/evm" "$OUT_DIR/native"
 
-printf '\n[1/9] Format check\n'
+printf '\n[1/10] Format check\n'
 "$FE_BIN" fmt --check "$WORKSPACE"
 
-printf '\n[2/9] Semantic checks\n'
+printf '\n[2/10] Semantic checks\n'
 "$FE_BIN" check -i dualclear_core "$WORKSPACE"
 "$FE_BIN" check -i dualclear_evm "$WORKSPACE"
 "$FE_BIN" check -i dualclear_native "$WORKSPACE"
 
-printf '\n[3/9] EVM/Sonatina release build\n'
+printf '\n[3/10] EVM/Sonatina release build\n'
 "$FE_BIN" build \
     --backend sonatina --profile release -O1 \
     --emit bytecode,runtime-bytecode,abi,metadata \
     --out-dir "$OUT_DIR/evm" \
     -i dualclear_evm "$WORKSPACE"
 
-printf '\n[4/9] Shared core tests on Sonatina\n'
+printf '\n[4/10] Shared core tests on Sonatina\n'
 "$FE_BIN" test \
     --backend sonatina --profile test -O1 \
     --jobs 1 --grouped \
     -i dualclear_core "$WORKSPACE"
 
-printf '\n[5/9] EVM adapter tests on Sonatina\n'
+printf '\n[5/10] EVM adapter tests on Sonatina\n'
 "$FE_BIN" test \
     --backend sonatina --profile test -O1 \
     --jobs 1 --grouped \
     -i dualclear_evm "$WORKSPACE"
 
-printf '\n[6/9] Native release build\n'
+printf '\n[6/10] Native release build\n'
 "$FE_BIN" build \
     --backend native --profile release -O1 \
     --emit executable \
@@ -60,20 +60,23 @@ if [[ "${#native_executables[@]}" -ne 1 ]]; then
     exit 1
 fi
 
-printf '\n[7/9] Native executable canary\n'
+printf '\n[7/10] Native executable golden mode\n'
 "${native_executables[0]}" >/dev/null
 
-printf '\n[8/9] Shared core tests on native\n'
+printf '\n[8/10] Shared core tests on native\n'
 "$FE_BIN" test \
     --backend native --profile test -O1 \
     --jobs 1 --grouped --native-timeout-secs 120 \
     -i dualclear_core "$WORKSPACE"
 
-printf '\n[9/9] Native adapter tests\n'
+printf '\n[9/10] Native adapter tests\n'
 "$FE_BIN" test \
     --backend native --profile test -O1 \
     --jobs 1 --grouped --native-timeout-secs 120 \
     -i dualclear_native "$WORKSPACE"
+
+printf '\n[10/10] Native CLI parser and boundary tests\n'
+NATIVE_BIN="${native_executables[0]}" "$ROOT_DIR/scripts/test-cli.sh"
 
 printf '\nDualClear verification: PASS\n'
 printf 'Artifacts: %s\n' "$OUT_DIR"
