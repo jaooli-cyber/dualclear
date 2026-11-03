@@ -346,6 +346,32 @@ fn golden_input() -> MemVec<Bid> {
     bids
 }
 
+fn assert_same_ranked_fills(_ left: MemSlice<Fill>, _ right: MemSlice<Fill>) {
+    core::assert(left.len() == right.len())
+    var index: usize = 0
+    while index < left.len() {
+        core::assert(left[index].id == right[index].id)
+        core::assert(left[index].quantity == right[index].quantity)
+        index += 1
+    }
+}
+
+fn assert_same_complete_outcome(_ left: Outcome, _ right: Outcome) {
+    core::assert(left.clearing_price_raw == right.clearing_price_raw)
+    core::assert(left.filled == right.filled)
+    core::assert(left.fingerprint == right.fingerprint)
+    assert_same_ranked_fills(left.fills.as_slice(), right.fills.as_slice())
+    core::assert(left.canonical_bytes.len() == right.canonical_bytes.len())
+
+    var index: usize = 0
+    while index < left.canonical_bytes.len() {
+        core::assert(
+            left.canonical_bytes[index] == right.canonical_bytes[index],
+        )
+        index += 1
+    }
+}
+
 #[test]
 fn fnv1a64_official_vectors() {
     let empty = MemVec<u8>::new()
@@ -680,27 +706,83 @@ fn golden_dcg1_bytes_are_exact() {
 }
 
 #[test]
-fn input_permutation_has_the_same_outcome() {
-    var bids = MemVec<Bid>::with_capacity(4)
-    bids.push(
-        Bid { id: 1, price: Price::from_raw(2000000), quantity: 5 },
-    )
-    bids.push(
-        Bid { id: 9, price: Price::from_raw(3000000), quantity: 2 },
-    )
-    bids.push(
-        Bid { id: 3, price: Price::from_raw(1000000), quantity: 7 },
-    )
-    bids.push(
-        Bid { id: 2, price: Price::from_raw(2000000), quantity: 5 },
-    )
+fn metamorphic_bid_permutation_preserves_complete_outcome() {
+    let baseline = clear(golden_input(), supply: 7)
+    var transformed_input = MemVec<Bid>::with_capacity(4)
+    transformed_input.push(
+            Bid { id: 1, price: Price::from_raw(2000000), quantity: 5 },
+        )
+    transformed_input.push(
+            Bid { id: 9, price: Price::from_raw(3000000), quantity: 2 },
+        )
+    transformed_input.push(
+            Bid { id: 3, price: Price::from_raw(1000000), quantity: 7 },
+        )
+    transformed_input.push(
+            Bid { id: 2, price: Price::from_raw(2000000), quantity: 5 },
+        )
 
-    let outcome = clear(bids, supply: 7)
-    core::assert(outcome.fingerprint == GOLDEN_FINGERPRINT)
-    core::assert(outcome.fills[0].id == 9 && outcome.fills[0].quantity == 2)
-    core::assert(outcome.fills[1].id == 1 && outcome.fills[1].quantity == 3)
-    core::assert(outcome.fills[2].id == 2 && outcome.fills[2].quantity == 2)
-    core::assert(outcome.fills[3].id == 3 && outcome.fills[3].quantity == 0)
+    let transformed = clear(transformed_input, supply: 7)
+    assert_same_complete_outcome(baseline, transformed)
+}
+
+#[test]
+fn metamorphic_affine_price_transform_preserves_allocations() {
+    let baseline = clear(golden_input(), supply: 7)
+    var transformed_input = MemVec<Bid>::with_capacity(4)
+    transformed_input.push(
+            Bid { id: 2, price: Price::from_raw(6000017), quantity: 5 },
+        )
+    transformed_input.push(
+            Bid { id: 3, price: Price::from_raw(3000017), quantity: 7 },
+        )
+    transformed_input.push(
+            Bid { id: 9, price: Price::from_raw(9000017), quantity: 2 },
+        )
+    transformed_input.push(
+            Bid { id: 1, price: Price::from_raw(6000017), quantity: 5 },
+        )
+
+    let transformed = clear(transformed_input, supply: 7)
+    core::assert(
+        transformed.clearing_price_raw == 3 * baseline.clearing_price_raw + 17,
+    )
+    core::assert(transformed.filled == baseline.filled)
+    assert_same_ranked_fills(baseline.fills.as_slice(), transformed.fills.as_slice())
+    core::assert(
+        transformed.canonical_bytes.len() == baseline.canonical_bytes.len(),
+    )
+}
+
+#[test]
+fn metamorphic_below_clearing_extension_is_economically_inert() {
+    let baseline = clear(golden_input(), supply: 7)
+    var transformed_input = golden_input()
+    transformed_input
+        .push(
+            Bid { id: 42, price: Price::from_raw(500000), quantity: 0xffffffffffffffff },
+        )
+
+    let transformed = clear(transformed_input, supply: 7)
+    core::assert(
+        transformed.clearing_price_raw == baseline.clearing_price_raw,
+    )
+    core::assert(transformed.filled == baseline.filled)
+    core::assert(transformed.fills.len() == baseline.fills.len() + 1)
+
+    var index: usize = 0
+    while index < baseline.fills.len() {
+        core::assert(transformed.fills[index].id == baseline.fills[index].id)
+        core::assert(
+            transformed.fills[index].quantity == baseline.fills[index].quantity,
+        )
+        index += 1
+    }
+    core::assert(transformed.fills[index].id == 42)
+    core::assert(transformed.fills[index].quantity == 0)
+    core::assert(
+        transformed.canonical_bytes.len() == baseline.canonical_bytes.len() + 56,
+    )
 }
 
 #[test]
