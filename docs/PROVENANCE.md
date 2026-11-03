@@ -24,8 +24,8 @@ The installation helper and CI verify this digest before execution.
 ## Historical viability baseline (local archive)
 
 The initial technical viability checkpoint is source commit
-`41707de0d43d3e5bdbb412cba839af8724042d12`, tree
-`7826e05fb6733c546854008e800380f3ea36f206`. It is an audit milestone, not the
+`68339193c2a708672dbba91ad7e70736efadd9c2`, tree
+`da56f13b1ca352e3530e674459f102a135d84339`. It is an audit milestone, not the
 commit selected for judging.
 
 A sealed local evidence manifest has SHA-256
@@ -35,6 +35,20 @@ its verification log has SHA-256
 Those archive files and large toolchain artifacts are intentionally excluded
 from Git. They preserve local audit continuity but are not required to verify
 the submission.
+
+## Private history normalization
+
+Before publication, documentation-only historical references were normalized:
+machine-local absolute paths became repository-root expressions, and named
+preselection alternatives became generic isolation wording. No Fe source,
+tests, fixtures, ABI data, authorship, commit timestamps, or commit topology
+were changed. The pre-normalization and post-normalization tip trees were
+byte-identical.
+
+A recoverable pre-normalization snapshot is retained in a sealed local Git
+bundle whose SHA-256 is
+`3c5ca274e885052027a4bb8be9281d26a69df85d3009745d1c36bb358d58caf5`.
+The bundle is excluded from the submission repository.
 
 ## Submission-state evidence
 

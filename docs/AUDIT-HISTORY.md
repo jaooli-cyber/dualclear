@@ -87,6 +87,13 @@ not individually supply-monotone, and deterministic venue IDs alone do not
 provide participant-level split resistance. Exact counterexamples and the
 venue's authentication/aggregation obligation are retained in the public docs.
 
+Before publication, a documentation-only history normalization replaced
+machine-local absolute paths with repository-root expressions and named
+preselection alternatives with generic isolation wording. The old and new tip
+trees were byte-identical; Fe source, tests, fixtures, ABI data, authorship,
+timestamps, and commit topology were unchanged. A sealed private recovery
+bundle and old-to-new commit map remain outside Git.
+
 The post-gate technical verdict is `GO`. This is the verdict relevant to
 the project's feasibility. The historical scheduling verdict remains visible
 here and in the underlying Git history.
@@ -102,5 +109,6 @@ interoperability checksum, per-bid rather than participant-level fairness, and
 no individual supply monotonicity guarantee.
 
 The detailed gate records remain recoverable in the post-H0 Git history. They
-are not part of the current public-facing tree because they contain superseded
-states and host-specific runbook paths; this page is the authoritative summary.
+are not part of the current submission-facing tree because they contain
+superseded states and historical runbook details; this page is the
+authoritative summary.
