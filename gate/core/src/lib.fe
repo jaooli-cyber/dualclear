@@ -1,0 +1,397 @@
+use core::fixed::UFixed
+use core::num::IntDowncast
+use core::ops::{Eq, Ord, WrappingMul}
+use core::ptr::{MemSlice, MemVec}
+use core::sort::sort
+
+pub const MAX_BIDS: usize = 16
+pub const GOLDEN_FINGERPRINT: u64 = 0xf85927c169cff4f1
+
+const FNV1A64_OFFSET: u64 = 0xcbf29ce484222325
+const FNV1A64_PRIME: u64 = 0x00000100000001b3
+
+pub type Price = UFixed<6>
+
+pub struct Bid { pub id: u64, pub price: Price, pub quantity: u64 }
+
+impl Copy for Bid {}
+
+impl Eq for Bid {
+    fn eq(self, _ other: Self) -> bool {
+        self.id == other.id && self.price == other.price && self.quantity == other.quantity
+    }
+}
+
+fn bid_before(_ left: Bid, _ right: Bid) -> bool {
+    if left.price != right.price {
+        return left.price > right.price
+    }
+    if left.id != right.id {
+        return left.id < right.id
+    }
+    left.quantity < right.quantity
+}
+
+impl Ord for Bid {
+    fn lt(self, _ other: Self) -> bool {
+        bid_before(self, other)
+    }
+
+    fn le(self, _ other: Self) -> bool {
+        !bid_before(other, self)
+    }
+
+    fn gt(self, _ other: Self) -> bool {
+        bid_before(other, self)
+    }
+
+    fn ge(self, _ other: Self) -> bool {
+        !bid_before(self, other)
+    }
+}
+
+pub struct Fill { pub id: u64, pub quantity: u64 }
+
+impl Copy for Fill {}
+
+pub struct Outcome {
+    pub clearing_price_raw: u256,
+    pub filled: u64,
+    pub fingerprint: u64,
+    pub fills: MemVec<Fill>,
+}
+
+struct RemainderSeat { index: usize, id: u64, remainder: u256 }
+
+impl Copy for RemainderSeat {}
+
+impl Eq for RemainderSeat {
+    fn eq(self, _ other: Self) -> bool {
+        self.index == other.index && self.id == other.id && self.remainder == other.remainder
+    }
+}
+
+fn seat_before(_ left: RemainderSeat, _ right: RemainderSeat) -> bool {
+    if left.remainder != right.remainder {
+        return left.remainder > right.remainder
+    }
+    if left.id != right.id {
+        return left.id < right.id
+    }
+    left.index < right.index
+}
+
+impl Ord for RemainderSeat {
+    fn lt(self, _ other: Self) -> bool {
+        seat_before(self, other)
+    }
+
+    fn le(self, _ other: Self) -> bool {
+        !seat_before(other, self)
+    }
+
+    fn gt(self, _ other: Self) -> bool {
+        seat_before(other, self)
+    }
+
+    fn ge(self, _ other: Self) -> bool {
+        !seat_before(self, other)
+    }
+}
+
+fn push_u64_be(_ bytes: mut MemVec<u8>, _ value: u64) {
+    var index: usize = 0
+    while index < 8 {
+        let shift: u64 = (((7 - index) * 8) as u256).downcast_unchecked()
+        let byte: u8 = ((value >> shift) & 0xff).downcast_unchecked()
+        bytes.push(byte)
+        index += 1
+    }
+}
+
+fn push_u256_be(_ bytes: mut MemVec<u8>, _ value: u256) {
+    var index: usize = 0
+    while index < 32 {
+        let shift: u256 = ((31 - index) * 8) as u256
+        let byte: u8 = ((value >> shift) & 0xff).downcast_unchecked()
+        bytes.push(byte)
+        index += 1
+    }
+}
+
+fn canonical_bytes(
+    _ bids: MemVec<Bid>,
+    _ fills: MemVec<Fill>,
+    _ supply: u64,
+    _ clearing_price_raw: u256,
+    _ filled: u64,
+) -> MemVec<u8> {
+    core::assert(bids.len() == fills.len())
+    var bytes = MemVec<u8>::with_capacity(60 + bids.len() * 56)
+
+    bytes.push(0x44)
+    bytes.push(0x43)
+    bytes.push(0x47)
+    bytes.push(0x31)
+    push_u64_be(mut bytes, supply)
+    push_u256_be(mut bytes, clearing_price_raw)
+    push_u64_be(mut bytes, filled)
+    let count: u64 = (bids.len() as u256).downcast_unchecked()
+    push_u64_be(mut bytes, count)
+
+    var index: usize = 0
+    while index < bids.len() {
+        let bid = bids[index]
+        let fill = fills[index]
+        core::assert(bid.id == fill.id)
+        push_u64_be(mut bytes, bid.id)
+        push_u256_be(mut bytes, bid.price.raw())
+        push_u64_be(mut bytes, bid.quantity)
+        push_u64_be(mut bytes, fill.quantity)
+        index += 1
+    }
+    bytes
+}
+
+/// Deterministic interoperability fingerprint only. FNV-1a64 is not
+/// collision-resistant and MUST NOT be used as a security commitment.
+pub fn fnv1a64(_ bytes: MemSlice<u8>) -> u64 {
+    var hash = FNV1A64_OFFSET
+    var index: usize = 0
+    while index < bytes.len() {
+        hash = (hash ^ bytes[index] as u64).wrapping_mul(FNV1A64_PRIME)
+        index += 1
+    }
+    hash
+}
+
+pub fn clear(_ input: own MemVec<Bid>, _ supply: u64) -> Outcome {
+    var bids = input
+    let count = bids.len()
+    core::assert(count > 0 && count <= MAX_BIDS)
+    core::assert(supply > 0)
+
+    var total_demand: u256 = 0
+    var index: usize = 0
+    while index < count {
+        let bid = bids[index]
+        core::assert(bid.quantity > 0)
+        var previous: usize = 0
+        while previous < index {
+            core::assert(bids[previous].id != bid.id)
+            previous += 1
+        }
+        total_demand += bid.quantity as u256
+        index += 1
+    }
+
+    let supply_word = supply as u256
+    core::assert(total_demand >= supply_word)
+    sort(mut bids)
+
+    var cumulative: u256 = 0
+    var pivot: usize = 0
+    var clearing_price = Price::zero()
+    while pivot < count {
+        let next = cumulative + bids[pivot].quantity as u256
+        if next >= supply_word {
+            clearing_price = bids[pivot].price
+            break
+        }
+        cumulative = next
+        pivot += 1
+    }
+    core::assert(pivot < count)
+
+    var group_start: usize = 0
+    var quantity_above: u256 = 0
+    while group_start < count && bids[group_start].price > clearing_price {
+        quantity_above += bids[group_start].quantity as u256
+        group_start += 1
+    }
+
+    var group_end = group_start
+    var group_quantity: u256 = 0
+    while group_end < count && bids[group_end].price == clearing_price {
+        group_quantity += bids[group_end].quantity as u256
+        group_end += 1
+    }
+
+    let remaining = supply_word - quantity_above
+    core::assert(group_quantity >= remaining)
+
+    var fills = MemVec<Fill>::with_capacity(count)
+    index = 0
+    while index < count {
+        fills.push(Fill { id: bids[index].id, quantity: 0 })
+        index += 1
+    }
+
+    index = 0
+    while index < group_start {
+        fills[index].quantity = bids[index].quantity
+        index += 1
+    }
+
+    var seats = MemVec<RemainderSeat>::with_capacity(group_end - group_start)
+    var base_sum: u256 = 0
+    index = group_start
+    while index < group_end {
+        let product = bids[index].quantity as u256 * remaining
+        let base = product / group_quantity
+        let remainder = product % group_quantity
+        let base_quantity: u64 = base.downcast().unwrap()
+        fills[index].quantity = base_quantity
+        base_sum += base
+        seats.push(RemainderSeat { index, id: bids[index].id, remainder })
+        index += 1
+    }
+
+    let leftover = remaining - base_sum
+    core::assert(leftover <= seats.len() as u256)
+    sort(mut seats)
+    var award: usize = 0
+    while (award as u256) < leftover {
+        let fill_index = seats[award].index
+        fills[fill_index].quantity += 1
+        award += 1
+    }
+
+    var checked_total: u256 = 0
+    index = 0
+    while index < count {
+        core::assert(fills[index].quantity <= bids[index].quantity)
+        checked_total += fills[index].quantity as u256
+        index += 1
+    }
+    core::assert(checked_total == supply_word)
+
+    let clearing_price_raw = clearing_price.raw()
+    let encoded = canonical_bytes(bids, fills, supply, clearing_price_raw, supply)
+    let fingerprint = fnv1a64(encoded.as_slice())
+
+    Outcome { clearing_price_raw, filled: supply, fingerprint, fills }
+}
+
+fn golden_input() -> MemVec<Bid> {
+    var bids = MemVec<Bid>::with_capacity(4)
+    bids.push(
+        Bid { id: 2, price: Price::from_raw(2000000), quantity: 5 },
+    )
+    bids.push(
+        Bid { id: 3, price: Price::from_raw(1000000), quantity: 7 },
+    )
+    bids.push(
+        Bid { id: 9, price: Price::from_raw(3000000), quantity: 2 },
+    )
+    bids.push(
+        Bid { id: 1, price: Price::from_raw(2000000), quantity: 5 },
+    )
+    bids
+}
+
+#[test]
+fn fnv1a64_official_vectors() {
+    let empty = MemVec<u8>::new()
+    core::assert(fnv1a64(empty.as_slice()) == 0xcbf29ce484222325)
+
+    var a = MemVec<u8>::with_capacity(1)
+    a.push(0x61)
+    core::assert(fnv1a64(a.as_slice()) == 0xaf63dc4c8601ec8c)
+
+    var foobar = MemVec<u8>::with_capacity(6)
+    foobar.push(0x66)
+    foobar.push(0x6f)
+    foobar.push(0x6f)
+    foobar.push(0x62)
+    foobar.push(0x61)
+    foobar.push(0x72)
+    core::assert(fnv1a64(foobar.as_slice()) == 0x85944171f73967e8)
+}
+
+#[test]
+fn golden_clearing_uses_largest_remainder_and_id_tie_break() {
+    let outcome = clear(golden_input(), supply: 7)
+    core::assert(outcome.clearing_price_raw == 2000000)
+    core::assert(outcome.filled == 7)
+    core::assert(outcome.fills.len() == 4)
+
+    core::assert(outcome.fills[0].id == 9 && outcome.fills[0].quantity == 2)
+    core::assert(outcome.fills[1].id == 1 && outcome.fills[1].quantity == 3)
+    core::assert(outcome.fills[2].id == 2 && outcome.fills[2].quantity == 2)
+    core::assert(outcome.fills[3].id == 3 && outcome.fills[3].quantity == 0)
+    core::assert(outcome.fingerprint == GOLDEN_FINGERPRINT)
+}
+
+#[test]
+fn input_permutation_has_the_same_outcome() {
+    var bids = MemVec<Bid>::with_capacity(4)
+    bids.push(
+        Bid { id: 1, price: Price::from_raw(2000000), quantity: 5 },
+    )
+    bids.push(
+        Bid { id: 9, price: Price::from_raw(3000000), quantity: 2 },
+    )
+    bids.push(
+        Bid { id: 3, price: Price::from_raw(1000000), quantity: 7 },
+    )
+    bids.push(
+        Bid { id: 2, price: Price::from_raw(2000000), quantity: 5 },
+    )
+
+    let outcome = clear(bids, supply: 7)
+    core::assert(outcome.fingerprint == GOLDEN_FINGERPRINT)
+    core::assert(outcome.fills[0].id == 9 && outcome.fills[0].quantity == 2)
+    core::assert(outcome.fills[1].id == 1 && outcome.fills[1].quantity == 3)
+    core::assert(outcome.fills[2].id == 2 && outcome.fills[2].quantity == 2)
+    core::assert(outcome.fills[3].id == 3 && outcome.fills[3].quantity == 0)
+}
+
+#[test]
+fn one_bid_with_exact_demand_clears_in_full() {
+    var bids = MemVec<Bid>::with_capacity(1)
+    bids.push(
+        Bid { id: 7, price: Price::from_raw(1250000), quantity: 4 },
+    )
+
+    let outcome = clear(bids, supply: 4)
+    core::assert(outcome.clearing_price_raw == 1250000)
+    core::assert(outcome.filled == 4)
+    core::assert(outcome.fills.len() == 1)
+    core::assert(outcome.fills[0].id == 7 && outcome.fills[0].quantity == 4)
+}
+
+#[test]
+fn all_same_price_is_proportional_and_conserves_supply() {
+    var bids = MemVec<Bid>::with_capacity(3)
+    bids.push(
+        Bid { id: 3, price: Price::from_raw(2000000), quantity: 2 },
+    )
+    bids.push(
+        Bid { id: 1, price: Price::from_raw(2000000), quantity: 2 },
+    )
+    bids.push(
+        Bid { id: 2, price: Price::from_raw(2000000), quantity: 2 },
+    )
+
+    let outcome = clear(bids, supply: 4)
+    core::assert(outcome.clearing_price_raw == 2000000)
+    core::assert(outcome.fills[0].id == 1 && outcome.fills[0].quantity == 2)
+    core::assert(outcome.fills[1].id == 2 && outcome.fills[1].quantity == 1)
+    core::assert(outcome.fills[2].id == 3 && outcome.fills[2].quantity == 1)
+}
+
+#[test]
+fn equal_remainders_award_the_lower_id_first() {
+    var bids = MemVec<Bid>::with_capacity(2)
+    bids.push(
+        Bid { id: 8, price: Price::from_raw(2000000), quantity: 1 },
+    )
+    bids.push(
+        Bid { id: 4, price: Price::from_raw(2000000), quantity: 1 },
+    )
+
+    let outcome = clear(bids, supply: 1)
+    core::assert(outcome.fills[0].id == 4 && outcome.fills[0].quantity == 1)
+    core::assert(outcome.fills[1].id == 8 && outcome.fills[1].quantity == 0)
+}

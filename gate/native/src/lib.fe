@@ -1,0 +1,45 @@
+use core::ptr::MemVec
+use dualclear_core::{Bid, GOLDEN_FINGERPRINT, Outcome, Price, clear}
+
+pub fn clear_native(_ bids: own MemVec<Bid>, _ supply: u64) -> Outcome {
+    clear(bids, supply)
+}
+
+fn native_golden_matches() -> bool {
+    var bids = MemVec<Bid>::with_capacity(4)
+    bids.push(
+        Bid { id: 3, price: Price::from_raw(1000000), quantity: 7 },
+    )
+    bids.push(
+        Bid { id: 1, price: Price::from_raw(2000000), quantity: 5 },
+    )
+    bids.push(
+        Bid { id: 2, price: Price::from_raw(2000000), quantity: 5 },
+    )
+    bids.push(
+        Bid { id: 9, price: Price::from_raw(3000000), quantity: 2 },
+    )
+
+    let outcome = clear_native(bids, supply: 7)
+    outcome.clearing_price_raw == 2000000
+        && outcome.filled == 7
+        && outcome.fingerprint == GOLDEN_FINGERPRINT
+        && outcome.fills.len() == 4
+        && outcome.fills[0].id == 9
+        && outcome.fills[0].quantity == 2
+        && outcome.fills[1].id == 1
+        && outcome.fills[1].quantity == 3
+        && outcome.fills[2].id == 2
+        && outcome.fills[2].quantity == 2
+        && outcome.fills[3].id == 3
+        && outcome.fills[3].quantity == 0
+}
+
+pub fn main() -> i32 {
+    if native_golden_matches() { 0 } else { 1 }
+}
+
+#[test]
+fn native_adapter_matches_the_shared_golden() {
+    core::assert(native_golden_matches())
+}

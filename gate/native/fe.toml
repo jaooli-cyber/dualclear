@@ -1,0 +1,6 @@
+[ingot]
+name = "dualclear_native"
+version = "0.1.0"
+
+[dependencies]
+dualclear_core = true

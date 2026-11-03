@@ -1,8 +1,8 @@
-# Ingot config
-[ingot]
+[workspace]
 name = "dualclear_gate"
 version = "0.1.0"
-
-# Optional dependencies
-# [dependencies]
-# utils = { path = "../utils" }
+members = [
+    { path = "core", name = "dualclear_core" },
+    { path = "evm", name = "dualclear_evm" },
+    { path = "native", name = "dualclear_native" },
+]

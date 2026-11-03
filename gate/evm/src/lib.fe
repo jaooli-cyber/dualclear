@@ -1,0 +1,83 @@
+use core::ptr::MemVec
+use dualclear_core::{Bid, GOLDEN_FINGERPRINT, MAX_BIDS, Price, clear}
+use std::abi::{DynArray, dyn_array_from, sol}
+use std::evm::{Evm, Wei}
+
+#[abi]
+pub struct BidInput { pub id: u64, pub price_raw: u256, pub quantity: u64 }
+
+impl Copy for BidInput {}
+
+#[abi]
+pub struct FillOutput { pub id: u64, pub quantity: u64 }
+
+impl Copy for FillOutput {}
+
+msg DualClearMsg {
+    #[selector = sol("clear(uint64,(uint64,uint256,uint64)[])")]
+    Clear { supply: u64, bids: DynArray<BidInput> } -> (u256, u64, u64, DynArray<FillOutput>),
+}
+
+pub contract DualClearGate {
+    init() {}
+
+    recv DualClearMsg {
+        Clear { supply, bids } -> (u256, u64, u64, DynArray<FillOutput>) {
+            core::assert(bids.len() > 0 && bids.len() <= MAX_BIDS)
+            var core_bids = MemVec<Bid>::with_capacity(bids.len())
+            var index: usize = 0
+            while index < bids.len() {
+                let input = bids.get(index)
+                core_bids
+                    .push(
+                        Bid {
+                            id: input.id,
+                            price: Price::from_raw(input.price_raw),
+                            quantity: input.quantity,
+                        },
+                    )
+                index += 1
+            }
+
+            let outcome = clear(core_bids, supply)
+            var output_fills = MemVec<FillOutput>::with_capacity(outcome.fills.len())
+            index = 0
+            while index < outcome.fills.len() {
+                let fill = outcome.fills[index]
+                output_fills.push(FillOutput { id: fill.id, quantity: fill.quantity })
+                index += 1
+            }
+            let encoded_fills = DynArray::from_slice(output_fills.as_slice())
+            (outcome.clearing_price_raw, outcome.filled, outcome.fingerprint, encoded_fills)
+        }
+    }
+}
+
+#[test]
+fn evm_adapter_matches_the_shared_golden() uses (evm: mut Evm) {
+    let gate = evm.create2<DualClearGate>(value: Wei::zero(), args: (), salt: 1)
+    let bids = dyn_array_from(
+        [
+            BidInput { id: 2, price_raw: 2000000, quantity: 5 },
+            BidInput { id: 3, price_raw: 1000000, quantity: 7 },
+            BidInput { id: 9, price_raw: 3000000, quantity: 2 },
+            BidInput { id: 1, price_raw: 2000000, quantity: 5 },
+        ],
+    )
+    let result: (u256, u64, u64, DynArray<FillOutput>) = evm
+        .call(
+            addr: gate,
+            gas: 2000000,
+            value: Wei::zero(),
+            message: DualClearMsg::Clear { supply: 7, bids },
+        )
+
+    core::assert(result.0 == 2000000)
+    core::assert(result.1 == 7)
+    core::assert(result.2 == GOLDEN_FINGERPRINT)
+    core::assert(result.3.len() == 4)
+    core::assert(result.3.get(0).id == 9 && result.3.get(0).quantity == 2)
+    core::assert(result.3.get(1).id == 1 && result.3.get(1).quantity == 3)
+    core::assert(result.3.get(2).id == 2 && result.3.get(2).quantity == 2)
+    core::assert(result.3.get(3).id == 3 && result.3.get(3).quantity == 0)
+}
