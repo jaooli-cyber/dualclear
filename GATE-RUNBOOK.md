@@ -49,35 +49,74 @@ gate. Never combine -i with gate/core, gate/evm, or gate/native.
 ## 1. Resource guard
 
 Run the following read-only observations immediately before the EVM phase and
-again before the native phase:
+again before the native phase. Process inspection is restricted to PID, nice
+level, CPU percentage, memory percentage, elapsed time, state, and command name:
 
     ROOT=/home/ensaudit/contest-labs/dualclear-contest-20261103
     nproc
     cat /proc/loadavg
-    awk '/MemAvailable:/ { print }' /proc/meminfo
+    awk '$1 == "MemTotal:" || $1 == "MemAvailable:" { print }' /proc/meminfo
     df -Pk "$ROOT"
-    ps -eo pid=,ni=,pcpu=,pmem=,etimes=,args= --sort=-pcpu | head -n 25
-    pgrep -af 'fe_linux_amd64|fe (build|test)' || true
+    export LC_ALL=C
+    PS_FIELDS='pid=,ni=,pcpu=,pmem=,etime=,stat=,comm='
+    SAMPLE_A=$(ps -eo "$PS_FIELDS" --sort=-pcpu)
+    printf '%s\n' "$SAMPLE_A" | head -n 25
+    sleep 15
+    SAMPLE_B=$(ps -eo "$PS_FIELDS" --sort=-pcpu)
+    printf '%s\n' "$SAMPLE_B" | head -n 25
+
+Do not inspect process arguments, command lines, paths, working directories,
+executables, environments, open files, or routing. In particular, do not use
+ps args/cmd, pgrep -a/-f, /proc/PID/cmdline, /proc/PID/cwd, /proc/PID/exe, or
+lsof to attribute an external process.
 
 All of these conditions are required:
 
-1. No unrelated Fe build or test process is running.
-2. No other runner is operating on this repository.
-3. The one-minute load average is at most half of nproc. This host currently has
+1. Neither sample contains an external Fe/compiler process name such as fe,
+   fe_linux_amd64, cargo, or rustc. Before this run starts, any such process is
+   treated as external because this run has not launched compiler work.
+2. No external PID consumes at least 75.0 percent CPU in both samples. The
+   samples are 15 seconds apart; this is the exact sustained-heavy-work guard
+   and covers non-Fe work using roughly one CPU, regardless of its command name.
+3. No other runner is operating on this repository.
+4. The one-minute load average is at most half of nproc. This host currently has
    eight logical CPUs, so the current ceiling is 4.00.
-4. MemAvailable is at least 2097152 KiB (2 GiB).
-5. The filesystem containing ROOT has at least 5242880 KiB (5 GiB) available.
+5. MemAvailable is at least 4194304 KiB (4 GiB) AND at least 25 percent of
+   MemTotal. Falling below either threshold is RG-STOP.
+6. The filesystem containing ROOT has at least 20971520 KiB (20 GiB) available.
 
-The following checks encode the numeric thresholds:
+The following checks encode the thresholds without reading process arguments:
 
+    printf '%s\n' "$SAMPLE_A" "$SAMPLE_B" | awk '
+      $7 ~ /^(fe|fe_linux_amd64|cargo|rustc)$/ { found = 1 }
+      END { exit found ? 1 : 0 }
+    '
+    awk '
+      FNR == NR {
+        if (($3 + 0) >= 75.0) hot[$1] = 1
+        next
+      }
+      (($1 in hot) && (($3 + 0) >= 75.0)) {
+        print
+        found = 1
+      }
+      END { exit found ? 1 : 0 }
+    ' <(printf '%s\n' "$SAMPLE_A") <(printf '%s\n' "$SAMPLE_B")
     LOAD1=$(awk '{ print $1 }' /proc/loadavg)
     CPUS=$(nproc)
     awk -v load="$LOAD1" -v cpus="$CPUS" 'BEGIN { exit !(load <= cpus / 2) }'
-    awk '$1 == "MemAvailable:" { exit !($2 >= 2097152) }' /proc/meminfo
-    test "$(df -Pk "$ROOT" | awk 'NR == 2 { print $4 }')" -ge 5242880
+    awk '
+      $1 == "MemTotal:" { total = $2 }
+      $1 == "MemAvailable:" { available = $2 }
+      END {
+        exit !(available >= 4194304 && available * 4 >= total)
+      }
+    ' /proc/meminfo
+    test "$(df -Pk "$ROOT" | awk 'NR == 2 { print $4 }')" -ge 20971520
 
 If any condition fails, classify the attempt as RG-STOP. Do not start a heavy
-command and do not count it as a product result.
+command and do not count it as a product result. Sustained external heavy work
+is the current RG-STOP reason even when no Fe process is present.
 
 ## 2. Run identity, provenance, and logging
 
@@ -312,7 +351,8 @@ Verify every manifest before accepting the evidence:
 
 Use exactly one primary classification per failed step:
 
-- RG-STOP: a resource-guard threshold fails or another Fe runner is active. No
+- RG-STOP: a resource-guard threshold fails, any external Fe/compiler process
+  is present, or any external PID is sustained at 75 percent CPU or more. No
   product command starts and no gate result is inferred.
 - PROVENANCE-STOP: compiler version or SHA-256 differs. Do not run anything
   heavy until the pinned toolchain is restored and independently verified.
@@ -322,23 +362,33 @@ Use exactly one primary classification per failed step:
 - INFRA: timeout caused by demonstrated host contention, OOM kill, filesystem
   exhaustion, lost SSH session, or an unavailable host dependency. Preserve
   evidence and allow at most one clean retry after the guard passes.
-- BUILD-S0: a correctly invoked EVM or native build fails to parse, type-check,
-  lower, link, or emit its required artifact under a passing resource guard.
-- TEST-S0: any shared-core, adapter, wrapper, or golden test fails with a
-  correctly built backend.
-- NATIVE-RUN-S0: no unique executable is emitted, the executable cannot start,
-  times out, or returns non-zero.
-- CROSS-BACKEND-S0: Sonatina and native disagree on the shared golden,
-  allocation, fingerprint, ordering, or conservation properties.
+- CORE-KILL: the shared core reproducibly fails a correct build/test path,
+  violates an allocation invariant, or fails its common golden under a passing
+  resource guard. This is a KILL condition.
+- EVM-S0: the Sonatina/EVM build or adapter test reproducibly fails while the
+  shared core remains sound. This blocks the EVM gate path and requires HOLD
+  until triage; it is not reclassified as a native-only problem.
+- NATIVE-PLAN-B: the native executable build, wrapper test, native backend, or
+  executable run fails in isolation while the shared core and the complete EVM
+  path are green. This may select PLAN B EVM and is not automatically S0/KILL.
+- CROSS-BACKEND-KILL: both backends validly execute the same shared case but
+  disagree on allocation, fingerprint, ordering, or conservation. A confirmed
+  semantic divergence is a KILL condition; inability to build or start only the
+  native adapter is NATIVE-PLAN-B, not a semantic divergence.
 - PERF-S1: the same bounded workload times out twice under passing guards,
   without an OOM or external contention explanation.
 - EVIDENCE-STOP: output inventory or any hash verification fails. Do not issue
   GO until evidence is complete and stable.
 
-A valid GO requires RC 0 for the EVM build, both Sonatina test suites, native
+A clean GO requires RC 0 for the EVM build, both Sonatina test suites, native
 build, native executable run, and both native test suites; exactly one native
 executable; a clean provenance record; and four verifying hash manifests.
-Otherwise retain HOLD and apply the failure classification above.
+
+PLAN B EVM is permitted only when the shared core and complete EVM path are
+green and the failure is isolated and demonstrated in the native
+adapter/backend/run path, with no valid semantic divergence. CORE-KILL or
+CROSS-BACKEND-KILL requires KILL. Otherwise retain HOLD pending classification
+and evidence.
 
 ## 10. Fe 26.5.0 CLI traps
 
