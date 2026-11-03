@@ -1,0 +1,7 @@
+* text=auto
+*.fe text eol=lf
+*.hex text eol=lf
+*.json text eol=lf
+*.sh text eol=lf
+*.yml text eol=lf
+Makefile text eol=lf

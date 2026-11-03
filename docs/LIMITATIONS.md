@@ -22,3 +22,7 @@ claim, not hidden implementation details.
 8. **Prototype status.** Fe 26.x and its native backend are evolving. Pin the
    exact compiler, rerun both target suites, and assess the final deployment
    environment.
+9. **Outcome is a mutable snapshot.** `fills`, `canonical_bytes`, and
+   `fingerprint` are consistent when returned by the kernel. Prototype callers
+   must treat them as immutable; mutating one field later does not recompute the
+   others.

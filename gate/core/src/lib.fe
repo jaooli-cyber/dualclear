@@ -6,6 +6,13 @@ use core::sort::sort
 
 pub const MAX_BIDS: usize = 16
 pub const GOLDEN_FINGERPRINT: u64 = 0xf85927c169cff4f1
+pub const GOLDEN_DCG1_LENGTH: usize = 284
+pub const TIE_BREAK_FINGERPRINT: u64 = 0x74bd323e5769a443
+pub const TIE_BREAK_DCG1_LENGTH: usize = 172
+pub const MAX_VALUES_FINGERPRINT: u64 = 0x9ea66f91dd47d14c
+pub const MAX_VALUES_DCG1_LENGTH: usize = 116
+pub const MAX_BIDS_FINGERPRINT: u64 = 0x83800decd8cfd64b
+pub const MAX_BIDS_DCG1_LENGTH: usize = 956
 
 const FNV1A64_OFFSET: u64 = 0xcbf29ce484222325
 const FNV1A64_PRIME: u64 = 0x00000100000001b3
@@ -58,6 +65,7 @@ pub struct Outcome {
     pub clearing_price_raw: u256,
     pub filled: u64,
     pub fingerprint: u64,
+    pub canonical_bytes: MemVec<u8>,
     pub fills: MemVec<Fill>,
 }
 
@@ -318,7 +326,7 @@ fn clear_validated(_ input: own MemVec<Bid>, _ supply: u64) -> Outcome {
     let encoded = canonical_bytes(bids, fills, supply, clearing_price_raw, supply)
     let fingerprint = fnv1a64(encoded.as_slice())
 
-    Outcome { clearing_price_raw, filled: supply, fingerprint, fills }
+    Outcome { clearing_price_raw, filled: supply, fingerprint, canonical_bytes: encoded, fills }
 }
 
 fn golden_input() -> MemVec<Bid> {
@@ -369,6 +377,306 @@ fn golden_clearing_uses_largest_remainder_and_id_tie_break() {
     core::assert(outcome.fills[2].id == 2 && outcome.fills[2].quantity == 2)
     core::assert(outcome.fills[3].id == 3 && outcome.fills[3].quantity == 0)
     core::assert(outcome.fingerprint == GOLDEN_FINGERPRINT)
+}
+
+#[test]
+fn golden_dcg1_bytes_are_exact() {
+    let outcome = clear(golden_input(), supply: 7)
+    let expected: [u8; 284] = [
+        0x44,
+        0x43,
+        0x47,
+        0x31,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x07,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x1e,
+        0x84,
+        0x80,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x07,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x04,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x09,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x2d,
+        0xc6,
+        0xc0,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x02,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x02,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x01,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x1e,
+        0x84,
+        0x80,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x05,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x03,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x02,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x1e,
+        0x84,
+        0x80,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x05,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x02,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x03,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x0f,
+        0x42,
+        0x40,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x07,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+    ]
+    core::assert(outcome.canonical_bytes.len() == GOLDEN_DCG1_LENGTH)
+    var index: usize = 0
+    while index < GOLDEN_DCG1_LENGTH {
+        core::assert(outcome.canonical_bytes[index] == expected[index])
+        index += 1
+    }
+    core::assert(
+        fnv1a64(outcome.canonical_bytes.as_slice()) == GOLDEN_FINGERPRINT,
+    )
 }
 
 #[test]
@@ -442,6 +750,8 @@ fn equal_remainders_award_the_lower_id_first() {
     let outcome = clear(bids, supply: 1)
     core::assert(outcome.fills[0].id == 4 && outcome.fills[0].quantity == 1)
     core::assert(outcome.fills[1].id == 8 && outcome.fills[1].quantity == 0)
+    core::assert(outcome.fingerprint == TIE_BREAK_FINGERPRINT)
+    core::assert(outcome.canonical_bytes.len() == TIE_BREAK_DCG1_LENGTH)
 }
 
 #[test]
@@ -484,6 +794,8 @@ fn maximum_bid_count_with_exact_demand_conserves_supply() {
         index += 1
     }
     core::assert(total == 16)
+    core::assert(outcome.fingerprint == MAX_BIDS_FINGERPRINT)
+    core::assert(outcome.canonical_bytes.len() == MAX_BIDS_DCG1_LENGTH)
 }
 
 #[test]
@@ -630,4 +942,6 @@ fn maximum_u64_quantity_and_u256_price_are_preserved() {
     core::assert(outcome.fills.len() == 1)
     core::assert(outcome.fills[0].id == 1)
     core::assert(outcome.fills[0].quantity == max_quantity)
+    core::assert(outcome.fingerprint == MAX_VALUES_FINGERPRINT)
+    core::assert(outcome.canonical_bytes.len() == MAX_VALUES_DCG1_LENGTH)
 }

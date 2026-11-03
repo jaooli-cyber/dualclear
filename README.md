@@ -43,7 +43,7 @@ order book + supply |  dualclear_core      |
                     |  clear / canonicalize|
                     +----------+-----------+
                                |
-                    shared Outcome + DCG1 checksum
+                  shared Outcome + DCG1 bytes/checksum
                                |
                  +-------------+-------------+
                  |                           |
@@ -66,7 +66,7 @@ invariants.
 
 - Linux x86-64
 - Fe **26.5.0** (`3dab95f`)
-- `curl`, `sha256sum`, `make`, and a C toolchain required by Fe native builds
+- `curl`, `sha256sum`, `cmp`, `make`, and a C toolchain for native builds
 
 Install the pinned compiler and verify its SHA-256:
 
@@ -80,22 +80,28 @@ Run the complete cross-backend verification:
 make verify
 ```
 
-Run the focused golden-vector demonstration:
+### 60-second judge demo
 
 ```sh
 make demo
 ```
 
-The demo uses one order book for both targets and checks:
+The command runs five verification stages:
 
-- clearing price: `2.000000` (raw `2000000`);
-- filled supply: `7`;
-- ranked fills: `[(9,2), (1,3), (2,2), (3,0)]`;
-- interoperability fingerprint: `0xf85927c169cff4f1`;
-- successful execution through the EVM adapter and native executable.
+- exact comparison of all 284 golden DCG1 bytes on Sonatina and native;
+- golden, tie-break, maximum-value, and 16-bid vectors through the EVM
+  adapter;
+- golden, tie-break, and maximum-value vectors through the native adapter;
+- a standalone native executable that emits the 568 canonical hex digits;
+- byte-for-byte comparison of that output with `demo/golden.dcg1.hex`.
 
-`demo/golden.json` is a human-readable mirror of the tested vector; the
-authoritative assertions are the Fe tests executed by the demo.
+The golden outcome is price `2.000000`, filled supply `7`, ranked fills
+`[(9,2), (1,3), (2,2), (3,0)]`, and fingerprint
+`0xf85927c169cff4f1`.
+
+`demo/golden.json` is the human-readable mirror. The Fe tests are
+authoritative for clearing semantics, while `demo/golden.dcg1.hex` is consumed
+directly to verify the native executable's emitted bytes.
 
 Build and test commands remain available separately through `make help`.
 
@@ -105,7 +111,7 @@ Build and test commands remain available separately through `make help`.
 gate/
   core/       target-neutral clearing and cross-backend tests
   evm/        typed EVM ABI adapter and adapter tests
-  native/     native wrapper and executable canary
+  native/     native wrapper and canonical-output executable
 demo/         portable golden vector
 scripts/      pinned toolchain, verification, and demo entrypoints
 docs/         architecture, security, limitations, provenance, and AI disclosure
@@ -116,11 +122,11 @@ docs/         architecture, security, limitations, provenance, and AI disclosure
 The current repository was built with Fe 26.5.0:
 
 - EVM/Sonatina release build: pass;
-- shared core under Sonatina: 16/16;
-- EVM adapter under Sonatina: 3/3;
+- shared core under Sonatina: 17/17;
+- EVM adapter under Sonatina: 10/10;
 - native release build and executable: pass;
-- the same shared core under native: 16/16;
-- native wrapper under native: 2/2;
+- the same shared core under native: 17/17;
+- native wrapper under native: 4/4;
 - invalid inputs return typed `InputError` values through `clear_checked`
   and the native `clear_native` API.
 

@@ -18,6 +18,7 @@
       { "id": 3, "quantity": 0 }
     ],
     "canonical_bytes_length": 284,
+    "canonical_hex_fixture": "demo/golden.dcg1.hex",
     "fingerprint_algorithm": "FNV-1a64",
     "fingerprint": "0xf85927c169cff4f1"
   },

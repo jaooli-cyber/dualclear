@@ -21,8 +21,9 @@ A bid contains:
 - a positive `u64` quantity.
 
 An outcome contains the raw clearing price, total filled supply, ranked fills,
-and an interoperability fingerprint. The current prototype accepts 1 to 16
-bids and positive supply no greater than aggregate demand.
+the complete canonical DCG1 bytes, and an interoperability fingerprint. The
+prototype accepts 1 to 16 bids and positive supply no greater than aggregate
+demand.
 
 ## Clearing algorithm
 
@@ -68,6 +69,10 @@ The four-bid golden vector occupies 284 bytes and has checksum
 `0xf85927c169cff4f1`. DCG1 is an interoperability format; its current checksum
 is not a security commitment.
 
+The golden test independently compares all 284 bytes under both Sonatina and
+native; it does not reconstruct the expected vector with the production
+encoder.
+
 ## Adapters
 
 ### EVM
@@ -81,9 +86,10 @@ firewall.
 ### Native
 
 The native ingot exposes
-`clear_native(MemVec<Bid>, u64) -> Result<InputError, Outcome>` and builds a
-standalone executable whose golden canary returns zero on success. The shared
-`validate_input` and `clear_checked` functions report six explicit error
-variants, so native callers can handle invalid input without a process-level
-trap. The assertion-based `clear` function remains the thin EVM adapter's
-enforcing entrypoint.
+`clear_native(MemVec<Bid>, u64) -> Result<InputError, Outcome>`. Its standalone
+executable clears the golden input and emits the complete DCG1 representation
+as lowercase hexadecimal. The demo compares that materialized output against
+an independent fixture. The shared `validate_input` and `clear_checked`
+functions report six explicit error variants, so native callers can handle
+invalid input without a process-level trap. The assertion-based `clear`
+function remains the thin EVM adapter's enforcing entrypoint.

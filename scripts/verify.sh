@@ -61,7 +61,7 @@ if [[ "${#native_executables[@]}" -ne 1 ]]; then
 fi
 
 printf '\n[7/9] Native executable canary\n'
-"${native_executables[0]}"
+"${native_executables[0]}" >/dev/null
 
 printf '\n[8/9] Shared core tests on native\n'
 "$FE_BIN" test \
