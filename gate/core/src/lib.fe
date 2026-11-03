@@ -437,3 +437,77 @@ fn maximum_bid_count_with_exact_demand_conserves_supply() {
     }
     core::assert(total == 16)
 }
+
+#[test(should_revert)]
+fn empty_input_reverts() {
+    let bids = MemVec<Bid>::new()
+    let _outcome = clear(bids, supply: 1)
+}
+
+#[test(should_revert)]
+fn seventeen_bids_revert() {
+    var bids = MemVec<Bid>::with_capacity(MAX_BIDS + 1)
+    var index: usize = 0
+    while index < MAX_BIDS + 1 {
+        let id: u64 = ((index + 1) as u256).downcast_unchecked()
+        bids.push(Bid { id, price: Price::from_raw(1000000), quantity: 1 })
+        index += 1
+    }
+    let _outcome = clear(bids, supply: 17)
+}
+
+#[test(should_revert)]
+fn zero_supply_reverts() {
+    var bids = MemVec<Bid>::with_capacity(1)
+    bids.push(
+        Bid { id: 1, price: Price::from_raw(1000000), quantity: 1 },
+    )
+    let _outcome = clear(bids, supply: 0)
+}
+
+#[test(should_revert)]
+fn zero_quantity_reverts() {
+    var bids = MemVec<Bid>::with_capacity(1)
+    bids.push(
+        Bid { id: 1, price: Price::from_raw(1000000), quantity: 0 },
+    )
+    let _outcome = clear(bids, supply: 1)
+}
+
+#[test(should_revert)]
+fn duplicate_id_reverts() {
+    var bids = MemVec<Bid>::with_capacity(2)
+    bids.push(
+        Bid { id: 7, price: Price::from_raw(2000000), quantity: 1 },
+    )
+    bids.push(
+        Bid { id: 7, price: Price::from_raw(1000000), quantity: 1 },
+    )
+    let _outcome = clear(bids, supply: 1)
+}
+
+#[test(should_revert)]
+fn demand_below_supply_reverts() {
+    var bids = MemVec<Bid>::with_capacity(1)
+    bids.push(
+        Bid { id: 1, price: Price::from_raw(1000000), quantity: 1 },
+    )
+    let _outcome = clear(bids, supply: 2)
+}
+
+#[test]
+fn maximum_u64_quantity_and_u256_price_are_preserved() {
+    let max_quantity: u64 = 0xffffffffffffffff
+    let max_price: u256 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    var bids = MemVec<Bid>::with_capacity(1)
+    bids.push(
+        Bid { id: 1, price: Price::from_raw(max_price), quantity: max_quantity },
+    )
+
+    let outcome = clear(bids, supply: max_quantity)
+    core::assert(outcome.clearing_price_raw == max_price)
+    core::assert(outcome.filled == max_quantity)
+    core::assert(outcome.fills.len() == 1)
+    core::assert(outcome.fills[0].id == 1)
+    core::assert(outcome.fills[0].quantity == max_quantity)
+}
